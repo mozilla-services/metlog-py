@@ -11,7 +11,8 @@
 # for the specific language governing rights and limitations under the
 # License.
 #
-# The Original Code is metlog
+# The Original Code is metlog, with a bit of stealing from pystatsd
+# (https://github.com/jsocol/pystatsd).
 #
 # The Initial Developer of the Original Code is the Mozilla Foundation.
 # Portions created by the Initial Developer are Copyright (C) 2011
@@ -19,6 +20,7 @@
 #
 # Contributor(s):
 #   Rob Miller (rmiller@mozilla.com)
+#   James Socol (james@mozilla.com)
 #
 # Alternatively, the contents of this file may be used under the terms of
 # either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -37,9 +39,76 @@ try:
     import simplejson as json
 except ImportError:
     import json
+import random
+import threading
+import time
 
 from datetime import datetime
+from functools import wraps
 from socket import socket, AF_INET, SOCK_DGRAM
+
+
+class TimerResult(object):
+    def __init__(self, ms=None):
+        self.ms = ms
+
+
+class _Timer(object):
+    """A contextdecorator for timing."""
+    _local = threading.local()
+
+    def __init__(self, client):
+        # We have to make sure the client is attached directly to __dict__
+        # because the __setattr__ below is so clever. Otherwise the client
+        # becomes a thread-local object even though the connection is for the
+        # whole process. This error was witnessed under mod_wsgi when using an
+        # ImportScript.
+        self.__dict__['client'] = client
+        random.seed()
+
+    def __delattr__(self, attr):
+        """Store thread-local data safely."""
+        delattr(self._local, attr)
+
+    def __getattr__(self, attr):
+        """Store thread-local data safely."""
+        return getattr(self._local, attr)
+
+    def __setattr__(self, attr, value):
+        """Store thread-local data safely."""
+        setattr(self._local, attr, value)
+
+    def __call__(self, name, timestamp=None, logger=None, severity=None,
+                 metadata=None, flavors=None, rate=1):
+        if callable(name):  # As a decorator, 'name' may be a function.
+
+            @wraps(name)
+            def wrapped(*a, **kw):
+                with self:
+                    return name(*a, **kw)
+            return wrapped
+
+        self.name = name
+        self.timestamp = timestamp
+        self.logger = logger
+        self.severity = severity
+        self.metadata = metadata
+        self.flavors = flavors
+        self.rate = rate
+        return self
+
+    def __enter__(self):
+        self.start = time.time()
+        self.result = TimerResult()
+        return self.result
+
+    def __exit__(self, typ, value, tb):
+        dt = time.time() - self.start
+        dt = int(round(dt * 1000))  # Convert to ms.
+        self.result.ms = dt
+        self.client.timing(self, dt)
+        del self.start, self.stat, self.rate, self.result  # Clean up.
+        return False
 
 
 class MetlogClient(object):
@@ -54,6 +123,10 @@ class MetlogClient(object):
         self.severity = severity
         self.flavors = dict()
         self.udpsock = socket(AF_INET, SOCK_DGRAM)
+        self.timer = _Timer(self)
+
+    def __del__(self):
+        self.udpsock.close()
 
     def set_message_flavor(self, flavor_name, metadata):
         self.flavors[flavor_name] = metadata
@@ -75,10 +148,19 @@ class MetlogClient(object):
                         message=message, metadata=metadata)
         self._send_msg(full_msg)
 
-    def timer(self, name, timestamp=None, logger=None, severity=None,
-              metadata=None, flavors=None, rate=1):
-        pass
+    def timing(self, timer, elapsed):
+        if timer.rate < 1 and random.random() >= timer.rate:
+            return
+        message = str(elapsed)
+        metadata = timer.metadata if timer.metadata is not None else dict()
+        metadata.update({'type': 'timer', 'name': timer.name,
+                         'rate': timer.rate})
+        self.metlog(timer.timestamp, timer.logger, timer.severity,
+                    message, metadata, timer.flavors)
 
-    def incr(self, name, timestamp=None, logger=None, severity=None,
+    def incr(self, name, count=1, timestamp=None, logger=None, severity=None,
              metadata=None, flavors=None):
-        pass
+        message = str(count)
+        metadata = metadata if metadata is not None else dict()
+        metadata.update({'type': 'counter', 'name': name})
+        self.metlog(timestamp, logger, severity, message, metadata, flavors)
