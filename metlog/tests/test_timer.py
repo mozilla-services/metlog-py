@@ -5,14 +5,14 @@ from nose.tools import eq_, ok_
 import time
 
 
-def _make_one():
+def _make_em():
     mock_client = Mock(spec=MetlogClient)
     timer = _Timer(mock_client)
     return mock_client, timer
 
 
 def test_contextmanager():
-    mock_client, timer = _make_one()
+    mock_client, timer = _make_em()
     with timer as result:
         time.sleep(0.01)
 
@@ -24,7 +24,7 @@ def test_contextmanager():
 
 
 def test_decorator():
-    mock_client, timer = _make_one()
+    mock_client, timer = _make_em()
 
     def timed():
         time.sleep(0.01)
