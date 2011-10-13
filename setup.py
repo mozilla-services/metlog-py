@@ -8,7 +8,8 @@ setup(name='metlog',
       description="Metrics Logging",
       long_description="""\
 """,
-      classifiers=[], # Get strings from http://pypi.python.org/pypi?%3Aaction=list_classifiers
+      classifiers=[],  # Get strings from
+                       # http://pypi.python.org/pypi?%3Aaction=list_classifiers
       keywords='',
       author='Rob Miller',
       author_email='rmiller@mozilla.com',
