@@ -42,10 +42,10 @@ except ImportError:
 import random
 import threading
 import time
+import zmq
 
 from datetime import datetime
 from functools import wraps
-from socket import socket, AF_INET, SOCK_DGRAM
 
 
 class TimerResult(object):
@@ -116,24 +116,30 @@ class MetlogClient(object):
     Client class encapsulating metlog API, and providing storage for default
     values for various metlog call settings.
     """
-    def __init__(self, host, port, logger='', severity=6):
-        self.host = host
-        self.port = port
+    _local = threading.local()
+    zmq_context = zmq.Context()
+
+    def __init__(self, bindstrs, logger='', severity=6):
+        self.bindstrs = bindstrs
         self.logger = logger
         self.severity = severity
         self.flavors = dict()
-        self.udpsock = socket(AF_INET, SOCK_DGRAM)
         self.timer = _Timer(self)
 
-    def __del__(self):
-        self.udpsock.close()
+    @property
+    def publisher(self):
+        if not hasattr(self._local, 'publisher'):
+            self._local.publisher = self.zmq_context.socket(zmq.PUB)
+            for bindstr in self.bindstrs:
+                self._local.publisher.bind(bindstr)
+        return self._local.publisher
 
     def set_message_flavor(self, flavor_name, metadata):
         self.flavors[flavor_name] = metadata
 
     def _send_message(self, full_msg):
         json_msg = json.dumps(full_msg)
-        self.udpsock.sendto(json_msg, (self.host, self.port))
+        self.publisher.send(json_msg)
 
     def metlog(self, timestamp=None, logger=None, severity=None, message='',
                metadata=None, flavors=None):
