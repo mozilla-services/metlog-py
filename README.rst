@@ -1,5 +1,5 @@
 ======================
-MetLog: Mozilla Services metrics logging Python library
+metlog: Python library for Mozilla Services' metrics logging
 ======================
 
 This is a Python library used for sending messages into a MozSvc metrics
