@@ -1,4 +1,4 @@
-from metlog.metlog import _Timer, MetlogClient
+from metlog.client import _Timer, MetlogClient
 from mock import Mock
 from nose.tools import eq_, ok_
 
