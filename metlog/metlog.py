@@ -107,7 +107,7 @@ class _Timer(object):
         dt = int(round(dt * 1000))  # Convert to ms.
         self.result.ms = dt
         self.client.timing(self, dt)
-        del self.start, self.stat, self.rate, self.result  # Clean up.
+        del self.start, self.result  # Clean up.
         return False
 
 
