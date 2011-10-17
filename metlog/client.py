@@ -79,7 +79,7 @@ class _Timer(object):
         setattr(self._local, attr, value)
 
     def __call__(self, name, timestamp=None, logger=None, severity=None,
-                 metadata=None, flavors=None, rate=1):
+                 tags=None, rate=1):
         if callable(name):  # As a decorator, 'name' may be a function.
 
             @wraps(name)
@@ -92,8 +92,7 @@ class _Timer(object):
         self.timestamp = timestamp
         self.logger = logger
         self.severity = severity
-        self.metadata = metadata
-        self.flavors = flavors
+        self.tags = tags
         self.rate = rate
         return self
 
@@ -118,12 +117,12 @@ class MetlogClient(object):
     """
     _local = threading.local()
     zmq_context = zmq.Context()
+    env_version = '0.8'
 
     def __init__(self, bindstrs, logger='', severity=6):
         self.bindstrs = bindstrs
         self.logger = logger
         self.severity = severity
-        self.flavors = dict()
         self.timer = _Timer(self)
 
     @property
@@ -134,39 +133,35 @@ class MetlogClient(object):
                 self._local.publisher.bind(bindstr)
         return self._local.publisher
 
-    def set_message_flavor(self, flavor_name, metadata):
-        self.flavors[flavor_name] = metadata
-
     def _send_message(self, full_msg):
         json_msg = json.dumps(full_msg)
         self.publisher.send(json_msg)
 
-    def metlog(self, timestamp=None, logger=None, severity=None, message='',
-               metadata=None, flavors=None):
+    def metlog(self, timestamp=None, logger=None, severity=None, payload='',
+               tags=None):
         timestamp = timestamp if timestamp is not None else datetime.utcnow()
         logger = logger if logger is not None else self.logger
         severity = severity if severity is not None else self.severity
-        metadata = metadata if metadata is not None else dict()
-        if flavors:
-            for flavor in flavors:
-                metadata.update(self.flavors.get(flavor, dict()))
+        tags = tags if tags is not None else dict()
+        if hasattr(timestamp, 'isoformat'):
+            timestamp = timestamp.isoformat()
         full_msg = dict(timestamp=timestamp, logger=logger, severity=severity,
-                        message=message, metadata=metadata)
-        self._send_msg(full_msg)
+                        payload=payload, tags=tags,
+                        env_version=self.env_version)
+        self._send_message(full_msg)
 
     def timing(self, timer, elapsed):
         if timer.rate < 1 and random.random() >= timer.rate:
             return
-        message = str(elapsed)
-        metadata = timer.metadata if timer.metadata is not None else dict()
-        metadata.update({'type': 'timer', 'name': timer.name,
-                         'rate': timer.rate})
-        self.metlog(timer.timestamp, timer.logger, timer.severity,
-                    message, metadata, timer.flavors)
+        payload = str(elapsed)
+        tags = timer.tags if timer.tags is not None else dict()
+        tags.update({'type': 'timer', 'name': timer.name, 'rate': timer.rate})
+        self.metlog(timer.timestamp, timer.logger, timer.severity, payload,
+                    tags)
 
     def incr(self, name, count=1, timestamp=None, logger=None, severity=None,
-             metadata=None, flavors=None):
-        message = str(count)
-        metadata = metadata if metadata is not None else dict()
-        metadata.update({'type': 'counter', 'name': name})
-        self.metlog(timestamp, logger, severity, message, metadata, flavors)
+             tags=None):
+        payload = str(count)
+        tags = tags if tags is not None else dict()
+        tags.update({'type': 'counter', 'name': name})
+        self.metlog(timestamp, logger, severity, payload, tags)
