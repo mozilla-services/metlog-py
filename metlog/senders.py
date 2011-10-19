@@ -33,37 +33,29 @@
 # the terms of any one of the MPL, the GPL or the LGPL.
 #
 # ***** END LICENSE BLOCK *****
-from setuptools import setup, find_packages
+import threading
+import zmq
 
-version = '0.1'
 
-setup(name='metlog',
-      version=version,
-      description="Metrics Logging",
-      long_description="""\
-""",
-      classifiers=[],  # Get strings from
-                       # http://pypi.python.org/pypi?%3Aaction=list_classifiers
-      keywords='',
-      author='Rob Miller',
-      author_email='rmiller@mozilla.com',
-      url='',
-      license='MPLv1.1',
-      packages=find_packages(exclude=['ez_setup', 'examples', 'tests']),
-      include_package_data=True,
-      zip_safe=False,
-      install_requires=[
-          # -*- Extra requirements: -*-
-          ],
-      extras_require={
-          'zeromqpub': ['pyzmq'],
-          },
-      tests_require=[
-          'nose',
-          'mock',
-          'pyzmq',
-          ],
-      entry_points="""
-      # -*- Entry points: -*-
-      """,
-      )
+class ZmqPubSender(object):
+    """
+    Sends metlog messages out via a ZeroMQ publisher socket.
+    """
+    _local = threading.local()
+    zmq_context = zmq.Context()
+
+    def __init__(self, bindstrs):
+        if isinstance(bindstrs, basestring):
+            bindstrs = [bindstrs]
+        self.bindstrs = bindstrs
+
+    @property
+    def publisher(self):
+        if not hasattr(self._local, 'publisher'):
+            self._local.publisher = self.zmq_context.socket(zmq.PUB)
+            for bindstr in self.bindstrs:
+                self._local.publisher.bind(bindstr)
+        return self._local.publisher
+
+    def send_message(self, msg):
+        self.publisher.send(msg)

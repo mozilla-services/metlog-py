@@ -42,7 +42,6 @@ except ImportError:
 import random
 import threading
 import time
-import zmq
 
 from datetime import datetime
 from functools import wraps
@@ -55,7 +54,6 @@ class TimerResult(object):
 
 class _Timer(object):
     """A contextdecorator for timing."""
-    _local = threading.local()
 
     def __init__(self, client):
         # We have to make sure the client is attached directly to __dict__
@@ -64,6 +62,8 @@ class _Timer(object):
         # whole process. This error was witnessed under mod_wsgi when using an
         # ImportScript.
         self.__dict__['client'] = client
+        # Have to do the same for the thread local itself, to avoid recursion
+        self.__dict__['_local'] = threading.local()
         random.seed()
 
     def __delattr__(self, attr):
@@ -79,8 +79,14 @@ class _Timer(object):
         setattr(self._local, attr, value)
 
     def __call__(self, name, timestamp=None, logger=None, severity=None,
-                 tags=None, rate=1):
-        if callable(name):  # As a decorator, 'name' may be a function.
+                 fields=None, rate=1):
+        # As a decorator, 'name' may be a function.
+        if callable(name):
+            # check to make sure we've been through already to set the
+            # timer values
+            if not hasattr(self, 'name'):
+                raise ValueError('Timer instance must be called and provided '
+                                 'a `name` value')
 
             @wraps(name)
             def wrapped(*a, **kw):
@@ -92,11 +98,14 @@ class _Timer(object):
         self.timestamp = timestamp
         self.logger = logger
         self.severity = severity
-        self.tags = tags
+        self.fields = fields
         self.rate = rate
         return self
 
     def __enter__(self):
+        if not hasattr(self, 'name'):
+            raise ValueError('Timer instance must be called and provided a '
+                             '`name` value')
         self.start = time.time()
         self.result = TimerResult()
         return self.result
@@ -115,38 +124,31 @@ class MetlogClient(object):
     Client class encapsulating metlog API, and providing storage for default
     values for various metlog call settings.
     """
-    _local = threading.local()
-    zmq_context = zmq.Context()
     env_version = '0.8'
 
-    def __init__(self, bindstrs, logger='', severity=6):
-        self.bindstrs = bindstrs
+    def __init__(self, sender, logger='', severity=6):
+        self.sender = sender
         self.logger = logger
         self.severity = severity
-        self.timer = _Timer(self)
 
     @property
-    def publisher(self):
-        if not hasattr(self._local, 'publisher'):
-            self._local.publisher = self.zmq_context.socket(zmq.PUB)
-            for bindstr in self.bindstrs:
-                self._local.publisher.bind(bindstr)
-        return self._local.publisher
+    def timer(self):
+        return _Timer(self)
 
     def _send_message(self, full_msg):
         json_msg = json.dumps(full_msg)
-        self.publisher.send(json_msg)
+        self.sender.send_message(json_msg)
 
-    def metlog(self, timestamp=None, logger=None, severity=None, payload='',
-               tags=None):
+    def metlog(self, type, timestamp=None, logger=None, severity=None,
+               payload='', fields=None):
         timestamp = timestamp if timestamp is not None else datetime.utcnow()
         logger = logger if logger is not None else self.logger
         severity = severity if severity is not None else self.severity
-        tags = tags if tags is not None else dict()
+        fields = fields if fields is not None else dict()
         if hasattr(timestamp, 'isoformat'):
             timestamp = timestamp.isoformat()
-        full_msg = dict(timestamp=timestamp, logger=logger, severity=severity,
-                        payload=payload, tags=tags,
+        full_msg = dict(type=type, timestamp=timestamp, logger=logger,
+                        severity=severity, payload=payload, fields=fields,
                         env_version=self.env_version)
         self._send_message(full_msg)
 
@@ -154,14 +156,14 @@ class MetlogClient(object):
         if timer.rate < 1 and random.random() >= timer.rate:
             return
         payload = str(elapsed)
-        tags = timer.tags if timer.tags is not None else dict()
-        tags.update({'type': 'timer', 'name': timer.name, 'rate': timer.rate})
-        self.metlog(timer.timestamp, timer.logger, timer.severity, payload,
-                    tags)
+        fields = timer.fields if timer.fields is not None else dict()
+        fields.update({'name': timer.name, 'rate': timer.rate})
+        self.metlog('timer', timer.timestamp, timer.logger, timer.severity,
+                    payload, fields)
 
     def incr(self, name, count=1, timestamp=None, logger=None, severity=None,
-             tags=None):
+             fields=None):
         payload = str(count)
-        tags = tags if tags is not None else dict()
-        tags.update({'type': 'counter', 'name': name})
-        self.metlog(timestamp, logger, severity, payload, tags)
+        fields = fields if fields is not None else dict()
+        fields['name'] = name
+        self.metlog('counter', timestamp, logger, severity, payload, fields)

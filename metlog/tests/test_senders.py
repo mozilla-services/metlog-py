@@ -33,71 +33,44 @@
 # the terms of any one of the MPL, the GPL or the LGPL.
 #
 # ***** END LICENSE BLOCK *****
-from metlog.client import _Timer, MetlogClient
-from mock import Mock
-from nose.tools import assert_raises, eq_, ok_
+from metlog.senders import ZmqPubSender
+from mock import patch
+from nose.tools import eq_
 
+import json
 import threading
 import time
 
 
-def _make_em():
-    mock_client = Mock(spec=MetlogClient)
-    timer = _Timer(mock_client)
-    return mock_client, timer
+@patch.object(ZmqPubSender, 'zmq_context')
+class TestZmqPubSender(object):
+    logger = 'tests'
 
+    def setUp(self):
+        self.sender = self._make_one()
 
-def test_enforce_name():
-    mock_client, timer = _make_em()
+    def _make_one(self):
+        return ZmqPubSender(bindstrs='bindstr')
 
-    def no_name_timer():
-        with timer:
-            time.sleep(0.01)
-    assert_raises(ValueError, no_name_timer)
+    def test_publ_threadsafe(self, mock_zmq_context):
 
-    def timed():
-        time.sleep(0.01)
-    assert_raises(ValueError, timer, timed)
+        def reentrant():
+            self.sender.publisher
 
+        t0 = threading.Thread(target=reentrant)
+        t1 = threading.Thread(target=reentrant)
+        t0.start()
+        time.sleep(0.01)  # give it time to ensure publisher is accessed
+        t1.start()
+        time.sleep(0.01)  # give it time to ensure publisher is accessed
+        # the socket call should have happened twice, once for each thread
+        eq_(mock_zmq_context.socket.call_count, 2)
 
-def test_contextmanager():
-    mock_client, timer = _make_em()
-    with timer('name') as result:
-        time.sleep(0.01)
-
-    eq_(mock_client.timing.call_count, 1)
-    timing_args = mock_client.timing.call_args[0]
-    eq_(timing_args[0], timer)
-    ok_(timing_args[1] >= 10)
-    eq_(timing_args[1], result.ms)
-
-
-def test_decorator():
-    mock_client, timer = _make_em()
-
-    @timer('name')
-    def timed():
-        time.sleep(0.01)
-
-    timed()
-    eq_(mock_client.timing.call_count, 1)
-    timing_args = mock_client.timing.call_args[0]
-    eq_(timing_args[0], timer)
-    ok_(timing_args[1] >= 10)
-
-
-def test_attrs_threadsafe():
-    mock_client, timer = _make_em()
-
-    def reentrant(val):
-        sentinel = object()
-        if getattr(timer, 'value', sentinel) is not sentinel:
-            ok_(False, "timer.value already exists in new thread")
-        timer.value = val
-
-    t0 = threading.Thread(target=reentrant, args=(10,))
-    t1 = threading.Thread(target=reentrant, args=(100,))
-    t0.start()
-    time.sleep(0.01)  # give it enough time to be sure timer.value is set
-    t1.start()  # this will raise assertion error if timer.value from other
-                # thread leaks through
+    def test_send(self, mock_zmq_context):
+        msg = {'this': 'is',
+               'a': 'test'}
+        json_msg = json.dumps(msg)
+        self.sender.send_message(json_msg)
+        publisher = self.sender.publisher
+        publisher.bind.assert_called_once_with('bindstr')
+        publisher.send.assert_called_once_with(json_msg)
