@@ -41,6 +41,11 @@ import threading
 import zmq
 
 
+# We need to set the maximum number of outbound messages so that
+# applications don't consume infinite memory if outbound messages are
+# not processed
+MAX_MESSAGES = 1000
+
 class ZmqPubSender(object):
     """
     Sends metlog messages out via a ZeroMQ publisher socket.
@@ -48,15 +53,18 @@ class ZmqPubSender(object):
     _local = threading.local()
     zmq_context = zmq.Context()
 
-    def __init__(self, bindstrs):
+    def __init__(self, bindstrs, queue_length=1000):
         if isinstance(bindstrs, basestring):
             bindstrs = [bindstrs]
         self.bindstrs = bindstrs
+        self._queue_length = queue_length
 
     @property
     def publisher(self):
         if not hasattr(self._local, 'publisher'):
             self._local.publisher = self.zmq_context.socket(zmq.PUB)
+            self._local.publisher.setsockopt(zmq.HWM, self._queue_length)
+
             for bindstr in self.bindstrs:
                 self._local.publisher.bind(bindstr)
         return self._local.publisher
