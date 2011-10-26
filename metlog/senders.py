@@ -33,6 +33,10 @@
 # the terms of any one of the MPL, the GPL or the LGPL.
 #
 # ***** END LICENSE BLOCK *****
+try:
+    import simplesjson as json
+except ImportError:
+    import json
 import threading
 import zmq
 
@@ -58,4 +62,15 @@ class ZmqPubSender(object):
         return self._local.publisher
 
     def send_message(self, msg):
-        self.publisher.send(msg)
+        """
+        Serialize and send a message off to the metlog listener.
+
+        :param msg: Dictionary representing the message.  The 'payload' value
+        will be JSONified and turned into the 0mq message payload, the
+        remaining key-value pairs will be JSONified and sent as the message
+        envelope.
+        """
+        payload = msg.pop('payload', '')
+        json_payload = json.dumps(payload)
+        json_env = json.dumps(msg)
+        self.publisher.send_multipart([json_env, json_payload])

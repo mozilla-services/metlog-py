@@ -57,8 +57,7 @@ class TestMetlogClient(object):
         del self.mock_sender
 
     def _extract_full_msg(self):
-        json_msg = self.mock_sender.send_message.call_args[0][0]
-        return json.loads(json_msg)
+        return self.mock_sender.send_message.call_args[0][0]
 
     def test_metlog_bare(self):
         payload = 'this is a test'

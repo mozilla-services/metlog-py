@@ -35,10 +35,6 @@
 # the terms of any one of the MPL, the GPL or the LGPL.
 #
 # ***** END LICENSE BLOCK *****
-try:
-    import simplejson as json
-except ImportError:
-    import json
 import random
 import threading
 import time
@@ -135,10 +131,6 @@ class MetlogClient(object):
     def timer(self):
         return _Timer(self)
 
-    def _send_message(self, full_msg):
-        json_msg = json.dumps(full_msg)
-        self.sender.send_message(json_msg)
-
     def metlog(self, type, timestamp=None, logger=None, severity=None,
                payload='', fields=None):
         timestamp = timestamp if timestamp is not None else datetime.utcnow()
@@ -150,7 +142,7 @@ class MetlogClient(object):
         full_msg = dict(type=type, timestamp=timestamp, logger=logger,
                         severity=severity, payload=payload, fields=fields,
                         env_version=self.env_version)
-        self._send_message(full_msg)
+        self.sender.send_message(full_msg)
 
     def timing(self, timer, elapsed):
         if timer.rate < 1 and random.random() >= timer.rate:

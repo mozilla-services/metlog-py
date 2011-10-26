@@ -69,8 +69,14 @@ class TestZmqPubSender(object):
     def test_send(self, mock_zmq_context):
         msg = {'this': 'is',
                'a': 'test'}
-        json_msg = json.dumps(msg)
-        self.sender.send_message(json_msg)
+        json_env = json.dumps(msg)
+        self.sender.send_message(msg)
         publisher = self.sender.publisher
-        publisher.bind.assert_called_once_with('bindstr')
-        publisher.send.assert_called_once_with(json_msg)
+        publisher.bind.assert_called_with('bindstr')
+        publisher.send_multipart.assert_called_with([json_env, '""'])
+
+        msg['payload'] = 'PAYLOAD'
+        self.sender.send_message(msg)
+        publisher.bind.assert_called_with('bindstr')
+        publisher.send_multipart.assert_called_with([json_env,
+                                                     '"PAYLOAD"'])
