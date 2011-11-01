@@ -33,31 +33,51 @@
 # the terms of any one of the MPL, the GPL or the LGPL.
 #
 # ***** END LICENSE BLOCK *****
+
+
+"""
+The metlog client supports a backchannel where you can modify the
+state of individual loggers.
+
+High level design:
+
+    * each client has a backchannel that will subscribe to
+      interrogation events
+    * when an event arrives, the client will send responses to
+      the interrogator via a second pub/sub channel.
+
+Client Interrogation:
+
+    * Each query comes in as a JSON blob.  The queries are only
+      checked when messages are sent out via the metlog method call or 
+      on a timing event.  
+
+      Note that timing events will trigger a backchannel read if and
+      only if the metlog_nosy_backchannel setting is enabled.
+
+"""
+
 try:
     import simplesjson as json
 except ImportError:
     import json
+
 import threading
 import zmq
 
-
-# We need to set the maximum number of outbound messages so that
-# applications don't consume infinite memory if outbound messages are
+# We need to set the maximum number of inbound messages so that
+# applications don't consume infinite memory if inbound messages are
 # not processed
-MAX_MESSAGES = 1000
 
-class AbstractZmq(object):
-    _zmq_context = zmq.Context()
+# Note that backchannel have shallow queues compared to the ZmqPubSender
+MAX_MESSAGES = 10
 
-    @static
-    def context():
-        return AbstractZmq._zmq_context
-
-class ZmqPubSender(object):
+class ZmqBackchannel(object):
     """
-    Sends metlog messages out via a ZeroMQ publisher socket.
+    Receive messages via a ZeroMQ subscriber socket.
     """
     _local = threading.local()
+    zmq_context = zmq.Context()
 
     def __init__(self, bindstrs, queue_length=MAX_MESSAGES):
         if isinstance(bindstrs, basestring):
@@ -66,25 +86,26 @@ class ZmqPubSender(object):
         self._queue_length = queue_length
 
     @property
-    def publisher(self):
-        if not hasattr(self._local, 'publisher'):
-            self._local.publisher = self.zmq_context.socket(zmq.PUB)
-            self._local.publisher.setsockopt(zmq.HWM, self._queue_length)
-
+    def subscriber(self):
+        if not hasattr(self._local, 'subscriber'):
+            self._local.subscriber = self.zmq_context.socket(zmq.SUB)
+            self._local.subscriber.setsockopt(zmq.HWM, self._queue_length)
+            self._local.subscriber.setsockopt(zmq.SUBSCRIBE, "")
             for bindstr in self.bindstrs:
-                self._local.publisher.bind(bindstr)
-        return self._local.publisher
+                self._local.subscriber.connect(bindstr)
+        return self._local.subscriber
 
-    def send_message(self, msg):
+    def recv_message(self):
         """
-        Serialize and send a message off to the metlog listener.
+        Read and deserialize a message off the 0mq channel.
 
-        :param msg: Dictionary representing the message.  The 'payload' value
-        will be JSONified and turned into the 0mq message payload, the
-        remaining key-value pairs will be JSONified and sent as the message
-        envelope.
+        If no message is there available, we just return None
         """
-        payload = msg.pop('payload', '')
-        json_payload = json.dumps(payload)
-        json_env = json.dumps(msg)
-        self.publisher.send_multipart([json_env, json_payload])
+        try:
+            msg = self.subscriber.recv(zmq.NOBLOCK)
+            return json.loads(msg)
+        except zmq.ZMQError, zmq_err:
+            # on read error, we don't do anything as we're in
+            # non-blocking mode
+            pass
+

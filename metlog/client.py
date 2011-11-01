@@ -38,6 +38,7 @@
 import random
 import threading
 import time
+import uuid
 
 from datetime import datetime
 from functools import wraps
@@ -114,6 +115,15 @@ class _Timer(object):
         del self.start, self.result  # Clean up.
         return False
 
+class SEVERITY(object):
+    EMERGENCY = 0
+    ALERT = 1
+    CRITICAL = 2
+    ERROR = 3
+    WARNING = 4
+    NOTICE = 5
+    INFORMATIONAL = 6
+    DEBUG = 7
 
 class MetlogClient(object):
     """
@@ -122,17 +132,97 @@ class MetlogClient(object):
     """
     env_version = '0.8'
 
-    def __init__(self, sender, logger='', severity=6):
+
+    def __init__(self, sender, logger='', severity=6, back_channel=None):
         self.sender = sender
+        self.back_channel = back_channel
         self.logger = logger
         self.severity = severity
+
+        # UUIDs are usually just matched on prefix, don't panic
+        self._uuid = str(uuid.uuid1())
 
     @property
     def timer(self):
         return _Timer(self)
 
+    def handle_backchannel(self):
+        """
+        A valid backchannel message has this structure:
+
+        {
+            'logger': '' or logger name,
+            'uuid': optional UUID prefix if you want fine grained
+                    control over individual loggers
+            'cmd': one of "LOGGER_NAMES", "SET_SEVERITY", "SET_RATE"
+            'value': optional. 0-7 for severity, 0.0-1.0 for rate
+            
+            # This is the callback point that we need to use to
+            # respond to messages
+            # TODO:
+            'callback': 'ipc://127.0.0.1:6010'
+        }
+
+        any invalid cmd tag will be dropped
+        """
+        if self.back_channel is None:
+            return
+
+        blob = self.back_channel.recv_message()
+
+        if blob is None:
+            return
+
+        COMMAND_MAP = {
+                'LOGGER_INFO': self.get_logger_info,
+                'SET_SEVERITY': self.set_severity,
+                'SET_RATE': self.set_rate,
+                }
+
+        log_name = blob.get('logger', None)
+        uuid = blob.get('uuid', None)
+
+        if log_name not in ('', self.logger) and \
+                not (uuid and self._uuid.startswith(uuid)):
+            # This isn't for us
+            return
+
+        try:
+            result = COMMAND_MAP[blob['cmd']](blob.get('value', None))
+            print "Got result: [%s]" % str(result)
+        except KeyError, ke:
+            # skip this - it's a malformed message
+            pass
+
+    def get_logger_info(self, ignored):
+        """
+        The logger name is the logger string, a pipe and the uuid
+        for the logger
+        """
+        return {'uuid': self._uuid,
+                'logger': self.logger,
+                'severity': self.severity,
+                }
+
+    def set_severity(self, value):
+        if not isinstance(value, int) or not (0 <= value <= 7):
+            # TODO: this should probably do something else
+            self.incr("set_severity_fail", severity=SEVERITY.WARNING)
+            return
+        self.severity = value
+
+    def set_rate(self, value):
+        if not isinstance(value, float) or not (0 <= value <= 1):
+            # TODO: this should probably do something else
+            self.incr("set_rate_fail", severity=SEVERITY.WARNING)
+            return
+        self.rate = value
+
     def metlog(self, type, timestamp=None, logger=None, severity=None,
                payload='', fields=None):
+
+        self.handle_backchannel()
+
         timestamp = timestamp if timestamp is not None else datetime.utcnow()
         logger = logger if logger is not None else self.logger
         severity = severity if severity is not None else self.severity
@@ -145,6 +235,8 @@ class MetlogClient(object):
         self.sender.send_message(full_msg)
 
     def timing(self, timer, elapsed):
+        self.handle_backchannel()
+
         if timer.rate < 1 and random.random() >= timer.rate:
             return
         payload = str(elapsed)
