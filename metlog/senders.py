@@ -53,7 +53,7 @@ class ZmqPubSender(object):
     _local = threading.local()
     zmq_context = zmq.Context()
 
-    def __init__(self, bindstrs, queue_length=1000):
+    def __init__(self, bindstrs, queue_length=MAX_MESSAGES):
         if isinstance(bindstrs, basestring):
             bindstrs = [bindstrs]
         self.bindstrs = bindstrs
