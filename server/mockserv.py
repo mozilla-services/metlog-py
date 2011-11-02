@@ -9,13 +9,8 @@ import time
 zmq_context = zmq.Context()
 subscriber = zmq_context.socket(zmq.SUB)
 subscriber.setsockopt(zmq.SUBSCRIBE, "")
-subscriber.setsockopt(zmq.HWM, 10)
-subscriber.connect("ipc:///tmp/feeds/0")
+subscriber.bind("ipc:///tmp/feeds/0")
 
 print  "Now listening"
 while True:
-    try:
-        print "[%s]" % subscriber.recv(zmq.NOBLOCK)
-    except zmq.ZMQError, zmq_err:
-        sys.stdout.write(".")
-        time.sleep(0.1)
+    print "[%s]" % subscriber.recv()
