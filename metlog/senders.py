@@ -46,18 +46,13 @@ import zmq
 # not processed
 MAX_MESSAGES = 1000
 
-class AbstractZmq(object):
-    _zmq_context = zmq.Context()
-
-    @static
-    def context():
-        return AbstractZmq._zmq_context
 
 class ZmqPubSender(object):
     """
     Sends metlog messages out via a ZeroMQ publisher socket.
     """
-    _local = threading.local()
+    _zmq_context = zmq.Context()
+    print "Context created!"
 
     def __init__(self, bindstrs, queue_length=MAX_MESSAGES):
         if isinstance(bindstrs, basestring):
@@ -65,10 +60,17 @@ class ZmqPubSender(object):
         self.bindstrs = bindstrs
         self._queue_length = queue_length
 
+        # The threadlocal is on the *instance* instead of the class so
+        # that we can create multiple instances of the ZmqPubSender
+        # that target dfferent bindstrings
+        self._local = threading.local()
+
     @property
     def publisher(self):
         if not hasattr(self._local, 'publisher'):
-            self._local.publisher = self.zmq_context.socket(zmq.PUB)
+            # 0mq sockets aren't threadsafe, so bind them into a
+            # threadlocal
+            self._local.publisher = self._zmq_context.socket(zmq.PUB)
             self._local.publisher.setsockopt(zmq.HWM, self._queue_length)
 
             for bindstr in self.bindstrs:
