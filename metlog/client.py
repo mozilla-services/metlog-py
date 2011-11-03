@@ -132,7 +132,6 @@ class MetlogClient(object):
     """
     env_version = '0.8'
 
-
     def __init__(self, sender, logger='', severity=6, back_channel=None):
         self.sender = sender
         self.back_channel = back_channel
@@ -141,6 +140,7 @@ class MetlogClient(object):
 
         # UUIDs are usually just matched on prefix, don't panic
         self._uuid = str(uuid.uuid1())
+
 
     @property
     def timer(self):
@@ -155,12 +155,7 @@ class MetlogClient(object):
             'uuid': optional UUID prefix if you want fine grained
                     control over individual loggers
             'cmd': one of "LOGGER_NAMES", "SET_SEVERITY", "SET_RATE"
-            'value': optional. 0-7 for severity, 0.0-1.0 for rate
-            
-            # This is the callback point that we need to use to
-            # respond to messages
-            # TODO:
-            'callback': 'ipc://127.0.0.1:6010'
+            'value': optional. 0-7 for severity, 0.0-1.0 for rcate
         }
 
         any invalid cmd tag will be dropped
@@ -189,7 +184,7 @@ class MetlogClient(object):
 
         try:
             result = COMMAND_MAP[blob['cmd']](blob.get('value', None))
-            print "Got result: [%s]" % str(result)
+            self.back_channel.send_callback({'type': "callback", 'result': result})
         except KeyError, ke:
             # skip this - it's a malformed message
             pass
@@ -199,21 +194,21 @@ class MetlogClient(object):
         The logger name is the logger string, a pipe and the uuid
         for the logger
         """
+        timestamp = datetime.utcnow().isoformat()
         return {'uuid': self._uuid,
                 'logger': self.logger,
                 'severity': self.severity,
+                'timestamp': timestamp
                 }
 
     def set_severity(self, value):
         if not isinstance(value, int) or not (0 <= value <= 7):
-            # TODO: this should probably do something else
             self.incr("set_severity_fail", severity=SEVERITY.WARNING)
             return
         self.severity = value
 
     def set_rate(self, value):
         if not isinstance(value, float) or not (0 <= value <= 1):
-            # TODO: this should probably do something else
             self.incr("set_rate_fail", severity=SEVERITY.WARNING)
             return
         self.rate = value
