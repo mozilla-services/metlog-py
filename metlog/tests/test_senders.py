@@ -42,7 +42,7 @@ import threading
 import time
 
 
-@patch.object(ZmqPubSender, 'zmq_context')
+@patch.object(ZmqPubSender, '_zmq_context')
 class TestZmqPubSender(object):
     logger = 'tests'
 
@@ -72,11 +72,11 @@ class TestZmqPubSender(object):
         json_env = json.dumps(msg)
         self.sender.send_message(msg)
         publisher = self.sender.publisher
-        publisher.bind.assert_called_with('bindstr')
+        publisher.connect.assert_called_with('bindstr')
         publisher.send_multipart.assert_called_with([json_env, '""'])
 
         msg['payload'] = 'PAYLOAD'
         self.sender.send_message(msg)
-        publisher.bind.assert_called_with('bindstr')
+        publisher.connect.assert_called_with('bindstr')
         publisher.send_multipart.assert_called_with([json_env,
                                                      '"PAYLOAD"'])
