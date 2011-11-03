@@ -64,6 +64,7 @@ except ImportError:
 
 import threading
 import zmq
+from base_zeromq import AbstractZmq
 
 # We need to set the maximum number of inbound messages so that
 # applications don't consume infinite memory if inbound messages are
@@ -72,28 +73,41 @@ import zmq
 # Note that backchannel have shallow queues compared to the ZmqPubSender
 MAX_MESSAGES = 10
 
-class ZmqBackchannel(object):
+class ZmqBackchannel(AbstractZmq):
     """
     Receive messages via a ZeroMQ subscriber socket.
     """
-    _local = threading.local()
-    zmq_context = zmq.Context()
 
-    def __init__(self, bindstrs, queue_length=MAX_MESSAGES):
-        if isinstance(bindstrs, basestring):
-            bindstrs = [bindstrs]
-        self.bindstrs = bindstrs
+    def __init__(self, bindstr, callback_bindstr, queue_length=MAX_MESSAGES):
+
+        # bindstr is for incoming interrogation requests into the
+        # metlog client
+        self.bindstr = bindstr
+
+        # callback_bindstr is for sending responses back to listeners
+        self.callback_bindstr = callback_bindstr
+
+        self._local = threading.local()
         self._queue_length = queue_length
 
     @property
+    def publisher(self):
+        if not hasattr(self._local, 'publisher'):
+            self._local.publisher = self._zmq_context.socket(zmq.PUSH)
+            self._local.publisher.connect(self.callback_bindstr)
+        return self._local.publisher
+
+    @property
     def subscriber(self):
+        # Socket to read from
         if not hasattr(self._local, 'subscriber'):
-            self._local.subscriber = self.zmq_context.socket(zmq.SUB)
-            self._local.subscriber.setsockopt(zmq.HWM, self._queue_length)
+            self._local.subscriber = self._zmq_context.socket(zmq.SUB)
             self._local.subscriber.setsockopt(zmq.SUBSCRIBE, "")
-            for bindstr in self.bindstrs:
-                self._local.subscriber.connect(bindstr)
+            self._local.subscriber.connect(self.bindstr)
         return self._local.subscriber
+
+    def send_callback(self, jdata_msg):
+        self.publisher.send(json.dumps(jdata_msg))
 
     def recv_message(self):
         """
@@ -103,7 +117,10 @@ class ZmqBackchannel(object):
         """
         try:
             msg = self.subscriber.recv(zmq.NOBLOCK)
-            return json.loads(msg)
+            try:
+                return json.loads(msg)
+            except:
+                return msg
         except zmq.ZMQError, zmq_err:
             # on read error, we don't do anything as we're in
             # non-blocking mode
