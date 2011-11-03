@@ -39,6 +39,7 @@ except ImportError:
     import json
 import threading
 import zmq
+from base_zeromq import AbstractZmq
 
 
 # We need to set the maximum number of outbound messages so that
@@ -47,13 +48,10 @@ import zmq
 MAX_MESSAGES = 1000
 
 
-class ZmqPubSender(object):
+class ZmqPubSender(AbstractZmq):
     """
     Sends metlog messages out via a ZeroMQ publisher socket.
     """
-    _zmq_context = zmq.Context()
-    print "Context created!"
-
     def __init__(self, bindstrs, queue_length=MAX_MESSAGES):
         if isinstance(bindstrs, basestring):
             bindstrs = [bindstrs]
@@ -74,7 +72,7 @@ class ZmqPubSender(object):
             self._local.publisher.setsockopt(zmq.HWM, self._queue_length)
 
             for bindstr in self.bindstrs:
-                self._local.publisher.bind(bindstr)
+                self._local.publisher.connect(bindstr)
         return self._local.publisher
 
     def send_message(self, msg):
@@ -90,3 +88,4 @@ class ZmqPubSender(object):
         json_payload = json.dumps(payload)
         json_env = json.dumps(msg)
         self.publisher.send_multipart([json_env, json_payload])
+
