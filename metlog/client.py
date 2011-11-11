@@ -38,7 +38,6 @@
 import random
 import threading
 import time
-import uuid
 
 from datetime import datetime
 from functools import wraps
@@ -137,41 +136,12 @@ class MetlogClient(object):
         self.logger = logger
         self.severity = severity
 
-        # UUIDs are usually just matched on prefix, don't panic
-        self._uuid = str(uuid.uuid1())
-
-
     @property
     def timer(self):
         return _Timer(self)
 
-    def get_logger_info(self, ignored):
-        """
-        The logger name is the logger string, a pipe and the uuid
-        for the logger
-        """
-        timestamp = datetime.utcnow().isoformat()
-        return {'uuid': self._uuid,
-                'logger': self.logger,
-                'severity': self.severity,
-                'timestamp': timestamp
-                }
-
-    def set_severity(self, value):
-        if not isinstance(value, int) or not (0 <= value <= 7):
-            self.incr("set_severity_fail", severity=SEVERITY.WARNING)
-            return
-        self.severity = value
-
-    def set_rate(self, value):
-        if not isinstance(value, float) or not (0 <= value <= 1):
-            self.incr("set_rate_fail", severity=SEVERITY.WARNING)
-            return
-        self.rate = value
-
     def metlog(self, type, timestamp=None, logger=None, severity=None,
                payload='', fields=None):
-
         timestamp = timestamp if timestamp is not None else datetime.utcnow()
         logger = logger if logger is not None else self.logger
         severity = severity if severity is not None else self.severity
