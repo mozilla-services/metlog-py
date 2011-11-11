@@ -132,9 +132,8 @@ class MetlogClient(object):
     """
     env_version = '0.8'
 
-    def __init__(self, sender, logger='', severity=6, back_channel=None):
+    def __init__(self, sender, logger='', severity=6):
         self.sender = sender
-        self.back_channel = back_channel
         self.logger = logger
         self.severity = severity
 
@@ -145,49 +144,6 @@ class MetlogClient(object):
     @property
     def timer(self):
         return _Timer(self)
-
-    def handle_backchannel(self):
-        """
-        A valid backchannel message has this structure:
-
-        {
-            'logger': '' or logger name,
-            'uuid': optional UUID prefix if you want fine grained
-                    control over individual loggers
-            'cmd': one of "LOGGER_INFO", "SET_SEVERITY", "SET_RATE"
-            'value': optional. 0-7 for severity, 0.0-1.0 for rcate
-        }
-
-        any invalid cmd tag will be dropped
-        """
-        if self.back_channel is None:
-            return
-
-        blob = self.back_channel.recv_message()
-
-        if blob is None:
-            return
-
-        COMMAND_MAP = {
-                'LOGGER_INFO': self.get_logger_info,
-                'SET_SEVERITY': self.set_severity,
-                'SET_RATE': self.set_rate,
-                }
-
-        log_name = blob.get('logger', None)
-        uuid = blob.get('uuid', None)
-
-        if log_name not in ('', self.logger) and \
-                not (uuid and self._uuid.startswith(uuid)):
-            # This isn't for us
-            return
-
-        try:
-            result = COMMAND_MAP[blob['cmd']](blob.get('value', None))
-            self.back_channel.send_callback({'type': "callback", 'result': result})
-        except KeyError, ke:
-            # skip this - it's a malformed message
-            pass
 
     def get_logger_info(self, ignored):
         """
@@ -216,8 +172,6 @@ class MetlogClient(object):
     def metlog(self, type, timestamp=None, logger=None, severity=None,
                payload='', fields=None):
 
-        self.handle_backchannel()
-
         timestamp = timestamp if timestamp is not None else datetime.utcnow()
         logger = logger if logger is not None else self.logger
         severity = severity if severity is not None else self.severity
@@ -230,8 +184,6 @@ class MetlogClient(object):
         self.sender.send_message(full_msg)
 
     def timing(self, timer, elapsed):
-        self.handle_backchannel()
-
         if timer.rate < 1 and random.random() >= timer.rate:
             return
         payload = str(elapsed)
