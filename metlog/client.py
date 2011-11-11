@@ -114,16 +114,6 @@ class _Timer(object):
         del self.start, self.result  # Clean up.
         return False
 
-class SEVERITY(object):
-    EMERGENCY = 0
-    ALERT = 1
-    CRITICAL = 2
-    ERROR = 3
-    WARNING = 4
-    NOTICE = 5
-    INFORMATIONAL = 6
-    DEBUG = 7
-
 class MetlogClient(object):
     """
     Client class encapsulating metlog API, and providing storage for default
