@@ -154,7 +154,7 @@ class MetlogClient(object):
             'logger': '' or logger name,
             'uuid': optional UUID prefix if you want fine grained
                     control over individual loggers
-            'cmd': one of "LOGGER_NAMES", "SET_SEVERITY", "SET_RATE"
+            'cmd': one of "LOGGER_INFO", "SET_SEVERITY", "SET_RATE"
             'value': optional. 0-7 for severity, 0.0-1.0 for rcate
         }
 
