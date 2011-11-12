@@ -50,23 +50,30 @@ class ZmqPubSender(object):
     """
     Sends metlog messages out via a ZeroMQ publisher socket.
     """
-    _local = threading.local()
-    zmq_context = zmq.Context()
 
-    def __init__(self, bindstrs, queue_length=1000):
+    _zmq_context = zmq.Context()
+
+    def __init__(self, bindstrs, queue_length=MAX_MESSAGES):
         if isinstance(bindstrs, basestring):
             bindstrs = [bindstrs]
         self.bindstrs = bindstrs
         self._queue_length = queue_length
 
+        # The threadlocal is on the *instance* instead of the class so
+        # that we can create multiple instances of the ZmqPubSender
+        # that target dfferent bindstrings
+        self._local = threading.local()
+
     @property
     def publisher(self):
         if not hasattr(self._local, 'publisher'):
-            self._local.publisher = self.zmq_context.socket(zmq.PUB)
+            # 0mq sockets aren't threadsafe, so bind them into a
+            # threadlocal
+            self._local.publisher = self._zmq_context.socket(zmq.PUB)
             self._local.publisher.setsockopt(zmq.HWM, self._queue_length)
 
             for bindstr in self.bindstrs:
-                self._local.publisher.bind(bindstr)
+                self._local.publisher.connect(bindstr)
         return self._local.publisher
 
     def send_message(self, msg):

@@ -114,7 +114,6 @@ class _Timer(object):
         del self.start, self.result  # Clean up.
         return False
 
-
 class MetlogClient(object):
     """
     Client class encapsulating metlog API, and providing storage for default
