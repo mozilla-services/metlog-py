@@ -46,6 +46,7 @@ import zmq
 # not processed
 MAX_MESSAGES = 1000
 
+
 class ZmqPubSender(object):
     """
     Sends metlog messages out via a ZeroMQ publisher socket.
@@ -85,7 +86,5 @@ class ZmqPubSender(object):
         remaining key-value pairs will be JSONified and sent as the message
         envelope.
         """
-        payload = msg.pop('payload', '')
-        json_payload = json.dumps(payload)
-        json_env = json.dumps(msg)
-        self.publisher.send_multipart([json_env, json_payload])
+        json_msg = json.dumps(msg)
+        self.publisher.send(json_msg)
