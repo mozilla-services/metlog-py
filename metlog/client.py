@@ -43,6 +43,20 @@ from datetime import datetime
 from functools import wraps
 
 
+class SEVERITY:
+    '''
+    Put a namespace around RFC 3164 syslog messages
+    '''
+    EMERGENCY = 0
+    ALERT = 1
+    CRITICAL = 2
+    ERROR = 3
+    WARNING = 4
+    NOTICE = 5
+    INFORMATIONAL = 6
+    DEBUG = 7
+
+
 class TimerResult(object):
     def __init__(self, ms=None):
         self.ms = ms
@@ -113,6 +127,7 @@ class _Timer(object):
         self.client.timing(self, dt)
         del self.start, self.result  # Clean up.
         return False
+
 
 class MetlogClient(object):
     """
