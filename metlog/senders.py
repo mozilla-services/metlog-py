@@ -37,6 +37,7 @@ try:
     import simplesjson as json
 except ImportError:
     import json
+import sys
 import threading
 import zmq
 
@@ -88,3 +89,12 @@ class ZmqPubSender(object):
         """
         json_msg = json.dumps(msg)
         self.publisher.send(json_msg)
+
+
+class StdOutSender(object):
+    """
+    Emits metlog messages to stdout for dev purposes.
+    """
+    def send_message(self, msg):
+        json_msg = json.dumps(msg)
+        sys.stdout.write('%s\n' % json_msg)
