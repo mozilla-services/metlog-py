@@ -98,3 +98,4 @@ class StdOutSender(object):
     def send_message(self, msg):
         json_msg = json.dumps(msg)
         sys.stdout.write('%s\n' % json_msg)
+        sys.stdout.flush()
