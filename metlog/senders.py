@@ -99,3 +99,20 @@ class StdOutSender(object):
         json_msg = json.dumps(msg)
         sys.stdout.write('%s\n' % json_msg)
         sys.stdout.flush()
+
+
+class DebugCaptureSender(object):
+    """
+    Capture upto 100 metlog messages in a circular buffer for
+    inspection later
+
+    This is only for DEBUGGING.  Do not use this for anything except
+    development.
+    """
+    def __init__(self):
+        import collections
+        self.msgs = collections.deque(maxlen=100)
+
+    def send_message(self, msg):
+        json_msg = json.dumps(msg)
+        self.msgs.append(json_msg)
