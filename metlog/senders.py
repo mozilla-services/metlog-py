@@ -39,7 +39,10 @@ except ImportError:
     import json
 import sys
 import threading
-import zmq
+try:
+    import zmq
+except ImportError:
+    zmq = None
 
 
 # We need to set the maximum number of outbound messages so that
@@ -53,7 +56,13 @@ class ZmqPubSender(object):
     Sends metlog messages out via a ZeroMQ publisher socket.
     """
 
-    _zmq_context = zmq.Context()
+    _zmq_context = zmq.Context() if zmq is not None else None
+
+    def __new__(cls, *args, **kwargs):
+        if zmq is None:
+            # no zmq -> no ZmqPubSender
+            raise ValueError('Must have `pyzmq` installed to use ZmqPubSender')
+        return super(ZmqPubSender, cls).__new__(cls)
 
     def __init__(self, bindstrs, queue_length=MAX_MESSAGES):
         if isinstance(bindstrs, basestring):
