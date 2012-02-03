@@ -81,11 +81,15 @@ class DebugCaptureSender(object):
 
     This is only for DEBUGGING.  Do not use this for anything except
     development.
+
+    Note that we're storing the raw message and only using JSON
+    serialization as a weak error checking facility to make sure
+    messages are serializable
     """
     def __init__(self):
         import collections
         self.msgs = collections.deque(maxlen=100)
 
     def send_message(self, msg):
-        json_msg = json.dumps(msg)
-        self.msgs.append(json_msg)
+        json.dumps(msg)
+        self.msgs.append(msg)
