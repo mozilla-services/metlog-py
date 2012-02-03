@@ -6,8 +6,9 @@
 # ***** END LICENSE BLOCK *****
 
 
-from metlog.senders import ZmqPubSender
+from metlog.senders import ZmqPubSender, zmq
 from mock import patch
+from nose.plugins.skip import SkipTest
 from nose.tools import eq_
 
 import json
@@ -20,6 +21,8 @@ class TestZmqPubSender(object):
     logger = 'tests'
 
     def setUp(self):
+        if zmq is None:
+            raise(SkipTest)
         self.sender = self._make_one()
 
     def _make_one(self):
