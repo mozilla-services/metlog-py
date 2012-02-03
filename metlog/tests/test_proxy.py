@@ -1,19 +1,41 @@
-from metlog.proxy import Proxy, log_cef
+from metlog.client_ext import log_cef
 import unittest
 from cef import logger
 
 from metlog.client import MetlogClient
+from metlog.client import ClientFactory
 from metlog.senders import DebugCaptureSender
+
+
+class TestClientSetup(unittest.TestCase):
+    def test_setup(self):
+        simple_client = ClientFactory.client('metlog.senders.DebugCaptureSender')
+        assert isinstance(simple_client, MetlogClient)
+        assert isinstance(simple_client.sender, DebugCaptureSender)
+
+    def test_setup_extensions(self):
+        simple_client = ClientFactory.client( \
+                'metlog.senders.DebugCaptureSender',
+                [],
+                {'foo': 'bar'},
+                {'cef': 'metlog.client_ext.log_cef'})
+
+        assert isinstance(simple_client, MetlogClient)
+        assert isinstance(simple_client.sender, DebugCaptureSender)
+        assert simple_client.sender._kwargs == {'foo': 'bar'}
+        assert hasattr(simple_client, 'cef')
 
 
 class TestBasicProxy(unittest.TestCase):
     def test_double_overload(self):
-        client = MetlogClient(sender=DebugCaptureSender())
+        self.logger = ClientFactory.client( \
+                'metlog.senders.DebugCaptureSender',
+                [],
+                {},
+                {'cef': 'metlog.client_ext.log_cef'})
 
-        self.logger = Proxy(client)
-        self.logger.extend_proxy('cef', log_cef)
         try:
-            self.logger.extend_proxy('cef', log_cef)
+            self.logger.add_method('cef', log_cef)
             msg = 'Should not have succeded with this extension'
             raise AssertionError(msg)
         except SyntaxError, se:
@@ -34,10 +56,11 @@ class TestCEFLogger(unittest.TestCase):
                        'cef.device_version': '3', 'cef.product': 'weave',
                        'cef': True}
 
-        client = MetlogClient(sender=DebugCaptureSender())
-
-        self.logger = Proxy(client)
-        self.logger.extend_proxy('cef', log_cef)
+        self.logger = ClientFactory.client( \
+                'metlog.senders.DebugCaptureSender',
+                [],
+                {},
+                {'cef': 'metlog.client_ext.log_cef'})
 
         self._warn = []
 

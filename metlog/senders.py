@@ -31,7 +31,7 @@ class ZmqPubSender(object):
 
     _zmq_context = zmq.Context() if zmq is not None else None
 
-    def __new__(cls, *args, **kwargs):
+    def __new__(cls, **kwargs):
         if zmq is None:
             # no zmq -> no ZmqPubSender
             raise ValueError('Must have `pyzmq` installed to use ZmqPubSender')
@@ -95,7 +95,8 @@ class DebugCaptureSender(object):
     serialization as a weak error checking facility to make sure
     messages are serializable
     """
-    def __init__(self):
+    def __init__(self, **kwargs):
+        self._kwargs = kwargs
         import collections
         self.msgs = collections.deque(maxlen=100)
 
