@@ -111,6 +111,11 @@ class MetlogClient(object):
         self.logger = logger
         self.severity = severity
 
+    def send_message(self, msg):
+        # Just a handy shortcut so that proxies don't have to talk to
+        # the sender attribute
+        self.sender.send_message(msg)
+
     @property
     def timer(self):
         return _Timer(self)
