@@ -37,7 +37,7 @@ from setuptools import setup, find_packages
 
 version = '0.1'
 
-setup(name='metlog',
+setup(name='metlog-py',
       version=version,
       description="Metrics Logging",
       long_description="""\
