@@ -42,13 +42,14 @@ setup(name='metlog',
       description="Metrics Logging",
       long_description="""\
 """,
-      classifiers=[],  # Get strings from
-                       # http://pypi.python.org/pypi?%3Aaction=list_classifiers
+      classifiers=[
+          'License :: OSI Approved :: Mozilla Public License 2.0 (MPL 2.0)',
+          ],
       keywords='',
       author='Rob Miller',
       author_email='rmiller@mozilla.com',
       url='',
-      license='MPLv1.1',
+      license='MPLv2.0',
       packages=find_packages(exclude=['ez_setup', 'examples', 'tests']),
       include_package_data=True,
       zip_safe=False,
