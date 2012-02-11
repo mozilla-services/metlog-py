@@ -30,10 +30,8 @@ class StdOutSender(object):
 
 class DebugCaptureSender(object):
     """
-    Capture upto 100 metlog messages in a circular buffer for
-    inspection later
-
-    This is only for DEBUGGING.  Do not use this for anything except
+    Capture up to 100 metlog messages in a circular buffer for inspection
+    later. This is only for DEBUGGING.  Do not use this for anything except
     development.
     """
     def __init__(self):

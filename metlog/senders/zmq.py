@@ -55,6 +55,11 @@ class ZmqPubSender(object):
 
     @property
     def publisher(self):
+        """
+        Property that exposes zmq publisher socket. Implemented as a property
+        because zmq sockets are not threadsafe and thus the socket object is
+        stored as a threadlocal value.
+        """
         if not hasattr(self._local, 'publisher'):
             # 0mq sockets aren't threadsafe, so bind them into a
             # threadlocal
@@ -69,10 +74,7 @@ class ZmqPubSender(object):
         """
         Serialize and send a message off to the metlog listener.
 
-        :param msg: Dictionary representing the message.  The 'payload' value
-        will be JSONified and turned into the 0mq message payload, the
-        remaining key-value pairs will be JSONified and sent as the message
-        envelope.
+        :param msg: Dictionary representing the message.
         """
         json_msg = json.dumps(msg)
         self.publisher.send(json_msg)
