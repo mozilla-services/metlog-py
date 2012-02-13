@@ -1,1 +1,1 @@
-include MetlogPy.spec
+include MetlogPy.spec *.rst
