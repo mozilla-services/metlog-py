@@ -57,8 +57,8 @@ class ZmqPubSender(object):
     def publisher(self):
         """
         Property that exposes zmq publisher socket. Implemented as a property
-        because zmq sockets are not threadsafe and thus the socket object is
-        stored as a threadlocal value.
+        because zmq sockets are not threadsafe and thus the actual socket
+        object is stored as a threadlocal value.
         """
         if not hasattr(self._local, 'publisher'):
             # 0mq sockets aren't threadsafe, so bind them into a

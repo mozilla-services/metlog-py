@@ -1,13 +1,20 @@
-======================
-metlog-py: Python client library for metrics & logging
-======================
+=========
+metlog-py
+=========
 
-metlog-py is a Python library used for inserting messages into the "Metlog"
-system for application logging and metrics gathering. The Metlog system is
-meant to reduce developer friction with regard to generating and sending data
-points intended for a number of different analytics and processing back
-ends. It does this by separating the concerns of message generation from those
-of message delivery and analysis. The Metlog system consists of three pieces:
+metlog-py is a Python client for the "Metlog" system of application logging and
+metrics gathering developed by the `Mozilla Services
+<https://wiki.mozilla.org/Services>`_ team. The Metlog system is meant to make
+life easier for application developers with regard to generating and sending
+logging and analytics data to various destinations. It achieves this goal (we
+hope!) by separating the concerns of message generation from those of message
+delivery and analysis. Front end application code no longer has to deal
+directly with separate back end client libraries, or even know what back end
+data storage and processing tools are in use. Instead, a message is labeled
+with a type (and possibly other metadata) and handed to the Metlog system,
+which then handles ultimate message delivery.
+
+The Metlog system consists of three pieces:
 
 generator
   This is the application that will be generating the data that is to be sent
@@ -32,3 +39,8 @@ The metlog-py library you are currently reading about is a client library meant
 to be used by Python-based generator applications. It provides a means for
 those apps to insert messages into the system for delivery to the router and,
 ultimately, one or more endpoints.
+
+More information about how Mozilla Services is using Metlog (including what is
+being used for a router and what endpoints are in use / planning to be used)
+can be found on the relevant `spec page
+<https://wiki.mozilla.org/Services/Sagrada/Metlog>`_.

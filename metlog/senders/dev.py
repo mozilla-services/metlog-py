@@ -23,6 +23,7 @@ class StdOutSender(object):
     Emits metlog messages to stdout for dev purposes.
     """
     def send_message(self, msg):
+        """JSONify and send to stdout."""
         json_msg = json.dumps(msg)
         sys.stdout.write('%s\n' % json_msg)
         sys.stdout.flush()
@@ -39,5 +40,6 @@ class DebugCaptureSender(object):
         self.msgs = collections.deque(maxlen=100)
 
     def send_message(self, msg):
+        """JSONify and append to the circular buffer."""
         json_msg = json.dumps(msg)
         self.msgs.append(json_msg)
