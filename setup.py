@@ -35,7 +35,7 @@
 # ***** END LICENSE BLOCK *****
 from setuptools import setup, find_packages
 
-version = '0.1'
+version = '0.8'
 
 setup(name='metlog-py',
       version=version,
@@ -45,10 +45,10 @@ setup(name='metlog-py',
       classifiers=[
           'License :: OSI Approved :: Mozilla Public License 2.0 (MPL 2.0)',
           ],
-      keywords='',
+      keywords='metlog metrics logging client',
       author='Rob Miller',
       author_email='rmiller@mozilla.com',
-      url='',
+      url='https://github.com/mozilla-services/metlog-py',
       license='MPLv2.0',
       packages=find_packages(exclude=['ez_setup', 'examples', 'tests']),
       include_package_data=True,

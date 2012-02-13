@@ -1,1 +1,2 @@
-include MetlogPy.spec
+include MetlogPy.spec *.rst
+recursive-include docs *.rst *.py Makefile
