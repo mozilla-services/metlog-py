@@ -13,16 +13,19 @@
 #   Victor Ng (vng@mozilla.com)
 #
 # ***** END LICENSE BLOCK *****
-
+import os
 from setuptools import setup, find_packages
 
 version = '0.8.1'
 
+here = os.path.abspath(os.path.dirname(__file__))
+with open(os.path.join(here, 'README.rst')) as f:
+    README = f.read()
+
 setup(name='metlog-py',
       version=version,
       description="Metrics Logging",
-      long_description="""\
-""",
+      long_description=README,
       classifiers=[
           'License :: OSI Approved :: Mozilla Public License 2.0 (MPL 2.0)',
           ],
