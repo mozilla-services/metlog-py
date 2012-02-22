@@ -140,7 +140,7 @@ class TestCannedDecorators(unittest.TestCase):
         assert msg['fields']['threadlocal']['foo'] == 'bar'
 
 
-class TestDisabledMetrics(unittest.TestCase):
+class TestDisabledGlobalMetrics(unittest.TestCase):
     def setUp(self):
         config = Config("""
         [test1]
@@ -162,6 +162,32 @@ class TestDisabledMetrics(unittest.TestCase):
 
         obj = SomeClass()
         assert obj.mymethod(5, 6) == 30
+
+
+class TestNamedDisabling(unittest.TestCase):
+    def setUp(self):
+        config = Config("""
+        [test1]
+        enabled=true
+        sender_backend=metlog.senders.DebugCaptureSender
+        disable_norebinder=true
+        """, 'test1')
+        HELPER.configure(config)
+
+    def test_no_rebind(self):
+        # Test that rebinding of methods doesn't occur if metlog is
+        # enabled, but the named binder is explicitly disalebd
+        class NamedBinder(object):
+            @rebind_dispatcher('rebind_method', 'norebinder')
+            def mymethod(self, x, y):
+                return x * y
+
+            def rebind_method(self, x, y):
+                return x - y
+
+        obj = NamedBinder()
+        assert obj.mymethod(5, 6) == 30
+
 
 
 class TestRebindMethods(unittest.TestCase):

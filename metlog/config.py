@@ -4,14 +4,30 @@ as providing some late binding helper objects which can be used to
 hook into plugin systems.
 
 """
-import re
 from metlog.exceptions import EnvironmentNotFoundError
-import os
-import StringIO
+from metlog.exceptions import UnknownConfigurationType
 from textwrap import dedent
 import ConfigParser
+import StringIO
+import os
+import re
+import types
 
-def Config(text, ns):
+
+def Config(blob, ns):
+    """
+    Parse an INI style text, python dictionary or a ConfigParser object
+    """
+    if isinstance(blob, basestring):
+        return parse_textini(blob, ns)
+    elif isinstance(blob, types.DictType):
+        return parse_configdict(blob, ns)
+    elif isinstance(blob, ConfigParser.ConfigParser):
+        return parse_configobj(blob, ns)
+    raise UnknownConfigurationType("Configuration type is unrecognized")
+
+
+def parse_textini(text, ns):
     """
     Parse INI text into a dictionary for use with Metlog
     """
@@ -60,6 +76,8 @@ _IS_ENV_VAR = re.compile('\$\{(\w.*)?\}')
 def convert(value):
     """Converts a config value"""
     def _get_env(matchobj):
+        if not matchobj:
+            return
         var = matchobj.groups()[0]
         if var not in os.environ:
             raise EnvironmentNotFoundError(var)
@@ -80,7 +98,10 @@ def convert(value):
             return value[1:-1]
         elif value.lower() in ('true', 'false'):
             return value.lower() == 'true'
-        return _IS_ENV_VAR.sub(_get_env, value)
+        match_obj = _IS_ENV_VAR.match(value)
+        if match_obj:
+            return _get_env(match_obj)
+        return value
 
     if isinstance(value, basestring) and '\n' in value:
         return [line for line in [_convert(line)

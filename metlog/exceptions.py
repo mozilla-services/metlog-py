@@ -19,3 +19,7 @@ class EnvironmentNotFoundError(Error):
 class MethodNotFoundError(Error):
     ''' Raised when a method lookup fails '''
     pass
+
+class UnknownConfigurationType(Error):
+    """ Raised when we are passed an unknown configuration type """
+    pass

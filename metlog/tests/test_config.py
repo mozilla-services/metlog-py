@@ -5,11 +5,15 @@
 # You can obtain one at http://mozilla.org/MPL/2.0/.
 # ***** END LICENSE BLOCK *****
 
+from metlog.exceptions import EnvironmentNotFoundError
+from metlog.exceptions import UnknownConfigurationType
+from metlog.config import Config
 from metlog.config import parse_configobj
 from metlog.config import parse_configdict
 from StringIO import StringIO
 from textwrap import dedent
 import ConfigParser
+import os
 
 
 def test_config():
@@ -34,17 +38,14 @@ def test_multiline():
             'sender_bindstrs': ['tcp://127.0.0.1:5665/',
                                'tcp://192.168.1.1:5665/']}
 
-    cfg_file = StringIO(dedent("""
+    cfg_file = Config("""
     [metlog_config]
     enabled=true
     sender_backend = metlog.sender.ZmqPubSender
     sender_bindstrs=tcp://127.0.0.1:5665/
                     tcp://192.168.1.1:5665/
-    """))
-    cfg = ConfigParser.ConfigParser()
-    cfg.readfp(cfg_file)
-
-    assert EXPECTED == parse_configobj(cfg, 'metlog_config')
+    """, 'metlog_config')
+    assert EXPECTED == cfg_file
 
 
 def test_dictlike():
@@ -66,3 +67,35 @@ def test_dictlike():
                                tcp://192.168.1.1:5665/"""}
 
     assert EXPECTED == parse_configdict(cfg)
+
+
+def test_environ_vars():
+    os.environ['METLOG_HOME'] = os.getcwd()
+    cfg = Config("""
+    [test1]
+    enabled=true
+    sender_backend=metlog.senders.DebugCaptureSender
+    MHOME=${METLOG_HOME}
+    """, 'test1')
+    assert cfg['mhome'] != None
+
+
+    try:
+        cfg = Config("""
+        [test1]
+        enabled=true
+        sender_backend=metlog.senders.DebugCaptureSender
+        MHOME=${NO_SUCH_VAR}
+        """, 'test1')
+
+        raise AssertionError("No environment variable of this name should be found")
+    except EnvironmentNotFoundError, enf:
+        pass
+
+def test_invalid_config_type():
+    try:
+        cfg = Config(range(5), 'foo')
+        raise AssertionError("Configuration should throw an immediate error")
+    except UnknownConfigurationType, uct:
+        pass
+

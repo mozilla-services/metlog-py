@@ -93,8 +93,6 @@ class MetlogHelper(object):
     def incr(self, *args, **kwargs):
         return self._client.incr(*args, **kwargs)
 
-class SimpleMetlogHelperPlugin(object):
-    pass
 
 # This is a shared MetlogHelper instance
 HELPER = MetlogHelper()
