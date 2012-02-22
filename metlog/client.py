@@ -10,11 +10,15 @@
 # Contributor(s):
 #   Rob Miller (rmiller@mozilla.com)
 #   James Socol (james@mozilla.com)
+#   Victor Ng (vng@mozilla.com)
 #
 # ***** END LICENSE BLOCK *****
+
 import random
 import threading
 import time
+import types
+from metlog.path import DottedNameResolver
 
 from datetime import datetime
 from functools import wraps
@@ -129,6 +133,25 @@ class MetlogClient(object):
         self.sender = sender
         self.logger = logger
         self.severity = severity
+        self._dynamic_methods = {}
+
+    def send_message(self, msg):
+        # Just a handy shortcut so that proxies don't have to talk to
+        # the sender attribute
+        self.sender.send_message(msg)
+
+    def add_method(self, name, method):
+        """ Extend the MetlogClient with a new method and bind it. """
+
+        assert isinstance(method, types.FunctionType)
+        if name in dir(self):
+            msg = "The name [%s] is already bound into the proxy" % name
+            raise SyntaxError(msg)
+
+        self._dynamic_methods[name] = method
+
+        meth = types.MethodType(method, self, self.__class__)
+        self.__dict__[name] = meth
 
     @property
     def timer(self):
@@ -185,6 +208,7 @@ class MetlogClient(object):
         self.metlog('timer', timer.timestamp, timer.logger, timer.severity,
                     payload, fields)
 
+    # TODO: push this down into an extension
     def incr(self, name, count=1, timestamp=None, logger=None, severity=None,
              fields=None):
         """
@@ -201,3 +225,26 @@ class MetlogClient(object):
         fields = fields if fields is not None else dict()
         fields['name'] = name
         self.metlog('counter', timestamp, logger, severity, payload, fields)
+
+
+class ClientFactory(object):
+    '''
+    This class generates a MetlogClient instance wrapped in a proxy
+    class with caller specified extensions
+    '''
+
+    @classmethod
+    def client(cls, sender_clsname, sender_args=[], sender_kwargs={}, extensions={}):
+        """
+        Configure a sender and extensions to Metlog in one shot
+        """
+        resolver = DottedNameResolver()
+        sender_cls = resolver.resolve(sender_clsname)
+
+        mclient = MetlogClient(sender=sender_cls(*sender_args, **sender_kwargs))
+
+        for name, func_name in extensions.items():
+            func = resolver.resolve(func_name)
+            mclient.add_method(name, func)
+
+        return mclient
