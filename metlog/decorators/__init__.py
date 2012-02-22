@@ -5,5 +5,7 @@
 # You can obtain one at http://mozilla.org/MPL/2.0/.
 # ***** END LICENSE BLOCK *****
 
-
-from metlog.classic import logger
+from metlog.decorators.context import apache_log  # NOQA
+from metlog.decorators.std import timeit  # NOQA
+from metlog.decorators.std import incr_count   # NOQA
+from metlog.decorators.context import get_tlocal  # NOQA
