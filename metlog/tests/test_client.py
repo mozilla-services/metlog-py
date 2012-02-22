@@ -1,17 +1,21 @@
 # ***** BEGIN LICENSE BLOCK *****
 # This Source Code Form is subject to the terms of the Mozilla Public
-# License, v. 2.0. If a copy of the MPL was not distributed with this
-# file,
+# License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at http://mozilla.org/MPL/2.0/.
+
+# The Initial Developer of the Original Code is the Mozilla Foundation.
+# Portions created by the Initial Developer are Copyright (C) 2012
+# the Initial Developer. All Rights Reserved.
+#
+# Contributor(s):
+#   Rob Miller (rmiller@mozilla.com)
+#
 # ***** END LICENSE BLOCK *****
-
-
 from datetime import datetime
 from metlog.client import MetlogClient
 from mock import Mock
 from nose.tools import eq_, ok_
 
-import json
 import threading
 import time
 
@@ -78,6 +82,7 @@ class TestMetlogClient(object):
 
     def test_timer_decorator(self):
         name = 'test'
+
         @self.client.timer(name)
         def timed():
             time.sleep(0.01)

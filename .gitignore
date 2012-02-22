@@ -1,5 +1,6 @@
 build
 dist
+_build
 .coverage
 *.pyc
 *.egg-info

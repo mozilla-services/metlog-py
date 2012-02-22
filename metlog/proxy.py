@@ -1,20 +1,24 @@
 # ***** BEGIN LICENSE BLOCK *****
 # This Source Code Form is subject to the terms of the Mozilla Public
-# License, v. 2.0. If a copy of the MPL was not distributed with this
-# file,
+# License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at http://mozilla.org/MPL/2.0/.
-# ***** END LICENSE BLOCK *****
 
-'''
+# The Initial Developer of the Original Code is the Mozilla Foundation.
+# Portions created by the Initial Developer are Copyright (C) 2012
+# the Initial Developer. All Rights Reserved.
+#
+# Contributor(s):
+#   Victor Ng (vng@mozilla.com)
+#
+# ***** END LICENSE BLOCK *****
+"""
 This module provides some decorators around the standard metlog client
 to provide richer methods. In essence, logging users can bind
 methods to the metlog client at runtime in a safe manner.
 
 The composition of the particular decorators is managed by metlog's
 configuration file. Each d
-
-
-'''
+"""
 
 import types
 
