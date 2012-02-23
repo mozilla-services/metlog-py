@@ -167,33 +167,9 @@ class TestDecoratorArgs(unittest.TestCase):
         """, 'test1')
         HELPER.configure(config)
 
-    def test_no_arg_incr(self):
-        '''
-        Test no argument
-        '''
-        HELPER._client.sender.msgs.clear()
-        assert len(HELPER._client.sender.msgs) == 0
-
-        @incr_count
-        def simple(x, y):
-            return x + y
-
-        simple(5, 6)
-        msgs = [json.loads(m) for m in HELPER._client.sender.msgs]
-        assert len(msgs) == 1
-
-        for msg in msgs:
-            expected = 'metlog.tests.test_decorators:simple'
-            actual = msg['fields']['name']
-            assert actual == expected
-
-        # First msg should be counter, then timer as decorators are
-        # applied inside to out, but execution is outside -> in
-        assert msgs[0]['type'] == 'counter'
-
     def test_arg_incr(self):
         '''
-        Test no argument
+        Test incr_count support arguments
         '''
         HELPER._client.sender.msgs.clear()
         assert len(HELPER._client.sender.msgs) == 0
@@ -211,3 +187,26 @@ class TestDecoratorArgs(unittest.TestCase):
                 'logger': 'somelogger', 'type': 'counter', 'payload': '5',
                 'env_version': '0.8'}
         assert actual == expected
+
+    def test_arg_timeit(self):
+        '''
+        Test timeit support arguments
+        '''
+        HELPER._client.sender.msgs.clear()
+        assert len(HELPER._client.sender.msgs) == 0
+
+        @timeit(name='qdo.timeit', timestamp=8231, logger='timeit_logger',
+                severity=5, fields={'anumber': 42, 'atext': 'foo'}, rate=7)
+        def simple(x, y):
+            return x + y
+
+        simple(5, 6)
+        msgs = [json.loads(m) for m in HELPER._client.sender.msgs]
+        assert len(msgs) == 1 
+
+        actual = msgs[0]
+        expected = {'severity': 5, 'timestamp': 8231, 'fields': {'anumber': 42, 'rate': 7,
+            'name': 'qdo.timeit', 'atext': 'foo'}, 'logger': 'timeit_logger',
+            'type': 'timer', 'payload': '0', 'env_version': '0.8'}
+        assert actual == expected
+

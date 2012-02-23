@@ -50,15 +50,29 @@ class timeit(MetricsDecorator):
     You must write you decorator in 'class'-style or else you won't be
     able to have your decorator disabled.
     '''
-    def __init__(self, fn):
-        self.set_fn(fn)
+    def __init__(self, *args, **kwargs):
+        if len(args) == 1 and len(kwargs) == 0 and callable(args[0]):
+            fn = args[0]
+            self.set_fn(fn)
+            self.metlog_kw({'name': self._method_name})
+        else:
+            self.set_fn(None)
+            self.metlog_kw(kwargs)
 
     @rebind_dispatcher('metlog_call', decorator_name='timeit')
     def __call__(self, *args, **kwargs):
+        if self._fn is None and callable(args[0]):
+            self.set_fn(args[0])
+            return self
+
         return self._invoke(*args, **kwargs)
 
     def metlog_call(self, *args, **kwargs):
-        with HELPER.timer(self._method_name):
+        if self._fn is None and callable(args[0]):
+            self.set_fn(args[0])
+            return self
+
+        with HELPER.timer(**self.kwargs):
             return self._invoke(*args, **kwargs)
 
 
