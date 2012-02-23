@@ -158,8 +158,56 @@ class TestRebindMethods(unittest.TestCase):
             assert mnfe.args[0].startswith("No such method")
 
 
-def test_decorators_with_args():
-    # TODO: implement some tests that verify that @timeit and @incr_count will
-    # accept standard metlog arguments
-    raise NotImplementedError
+class TestDecoratorArgs(unittest.TestCase):
+    def setUp(self):
+        config = Config("""
+        [test1]
+        enabled=true
+        sender_backend=metlog.senders.DebugCaptureSender
+        """, 'test1')
+        HELPER.configure(config)
 
+    def test_no_arg_incr(self):
+        '''
+        Test no argument
+        '''
+        HELPER._client.sender.msgs.clear()
+        assert len(HELPER._client.sender.msgs) == 0
+
+        @incr_count
+        def simple(x, y):
+            return x + y
+
+        simple(5, 6)
+        msgs = [json.loads(m) for m in HELPER._client.sender.msgs]
+        assert len(msgs) == 1
+
+        for msg in msgs:
+            expected = 'metlog.tests.test_decorators:simple'
+            actual = msg['fields']['name']
+            assert actual == expected
+
+        # First msg should be counter, then timer as decorators are
+        # applied inside to out, but execution is outside -> in
+        assert msgs[0]['type'] == 'counter'
+
+    def test_arg_incr(self):
+        '''
+        Test no argument
+        '''
+        HELPER._client.sender.msgs.clear()
+        assert len(HELPER._client.sender.msgs) == 0
+
+        @incr_count(name='qdo.foo', count=5, timestamp=0, logger='somelogger', severity=2)
+        def simple(x, y):
+            return x + y
+
+        simple(5, 6)
+        msgs = [json.loads(m) for m in HELPER._client.sender.msgs]
+        assert len(msgs) == 1
+        actual= msgs[0]
+
+        expected = {'severity': 2, 'timestamp': 0, 'fields': {'name': 'qdo.foo'},
+                'logger': 'somelogger', 'type': 'counter', 'payload': '5',
+                'env_version': '0.8'}
+        assert actual == expected
