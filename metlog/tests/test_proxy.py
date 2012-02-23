@@ -16,36 +16,37 @@ import unittest
 from cef import logger
 
 from metlog.client import MetlogClient
-from metlog.client import ClientFactory
 from metlog.senders import DebugCaptureSender
+from metlog.client import setup_client
+
+try:
+    import simplejson as json
+except ImportError:
+    import json  # NOQA
 
 
 class TestClientSetup(unittest.TestCase):
     def test_setup(self):
-        simple_client = ClientFactory.client('metlog.senders.DebugCaptureSender')
+        simple_client = setup_client('metlog.senders.DebugCaptureSender')
         assert isinstance(simple_client, MetlogClient)
         assert isinstance(simple_client.sender, DebugCaptureSender)
 
     def test_setup_extensions(self):
-        simple_client = ClientFactory.client( \
+        simple_client = setup_client( \
                 'metlog.senders.DebugCaptureSender',
-                [],
-                {'foo': 'bar'},
-                {'cef': 'metlog.client_ext.log_cef'})
+                extensions={'cef': 'metlog.client_ext.log_cef'})
 
         assert isinstance(simple_client, MetlogClient)
         assert isinstance(simple_client.sender, DebugCaptureSender)
-        assert simple_client.sender._kwargs == {'foo': 'bar'}
+        #assert simple_client.sender._kwargs == {'foo': 'bar'}
         assert hasattr(simple_client, 'cef')
 
 
 class TestBasicProxy(unittest.TestCase):
     def test_double_overload(self):
-        self.logger = ClientFactory.client( \
+        self.logger = setup_client(\
                 'metlog.senders.DebugCaptureSender',
-                [],
-                {},
-                {'cef': 'metlog.client_ext.log_cef'})
+                extensions={'cef': 'metlog.client_ext.log_cef'})
 
         try:
             self.logger.add_method('cef', log_cef)
@@ -69,11 +70,9 @@ class TestCEFLogger(unittest.TestCase):
                        'cef.device_version': '3', 'cef.product': 'weave',
                        'cef': True}
 
-        self.logger = ClientFactory.client( \
+        self.logger = setup_client(\
                 'metlog.senders.DebugCaptureSender',
-                [],
-                {},
-                {'cef': 'metlog.client_ext.log_cef'})
+                extensions={'cef': 'metlog.client_ext.log_cef'})
 
         self._warn = []
 
@@ -91,7 +90,7 @@ class TestCEFLogger(unittest.TestCase):
         self.logger.cef(name, severity, self.environ, self.config, *args, **kw)
         msgs = self.logger.sender.msgs
 
-        msg = msgs[0]
+        msg = json.loads(msgs[0])
         msgs.clear()
         # We only care about the CEF payload
         assert msg['type'] == 'cef'

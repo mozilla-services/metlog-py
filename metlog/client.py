@@ -227,24 +227,29 @@ class MetlogClient(object):
         self.metlog('counter', timestamp, logger, severity, payload, fields)
 
 
-class ClientFactory(object):
-    '''
-    This class generates a MetlogClient instance wrapped in a proxy
-    class with caller specified extensions
-    '''
 
-    @classmethod
-    def client(cls, sender_clsname, sender_args=[], sender_kwargs={}, extensions={}):
-        """
-        Configure a sender and extensions to Metlog in one shot
-        """
-        resolver = DottedNameResolver()
-        sender_cls = resolver.resolve(sender_clsname)
+def setup_client(sender_clsname, **kwargs):
+    """
+    Configure a sender and extensions to Metlog in one shot
+    """
+    sender_args = kwargs.get('sender_args', [])
+    sender_kwargs = kwargs.get('sender_kwargs', {})
+    extensions = kwargs.get('extensions', {})
 
-        mclient = MetlogClient(sender=sender_cls(*sender_args, **sender_kwargs))
+    for key in ['sender_args', 'sender_kwargs', 'extensions']:
+        if key in kwargs:
+            del kwargs[key]
 
-        for name, func_name in extensions.items():
-            func = resolver.resolve(func_name)
-            mclient.add_method(name, func)
+    if len(kwargs) > 0:
+        raise SyntaxError('Unexpected keywords passed into setup_client: %s' % str(kwargs))
 
-        return mclient
+    resolver = DottedNameResolver()
+    sender_cls = resolver.resolve(sender_clsname)
+
+    mclient = MetlogClient(sender=sender_cls(*sender_args, **sender_kwargs))
+
+    for name, func_name in extensions.items():
+        func = resolver.resolve(func_name)
+        mclient.add_method(name, func)
+
+    return mclient
