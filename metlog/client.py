@@ -69,6 +69,12 @@ class _Timer(object):
         """Store thread-local data safely."""
         setattr(self._local, attr, value)
 
+
+    def disabled(self):
+        if hasattr(self.client, '_disabled_timers'):
+            return self.name in self.client._disabled_timers
+        return False
+
     def __call__(self, name, timestamp=None, logger=None, severity=None,
                  fields=None, rate=1):
         """
@@ -103,11 +109,17 @@ class _Timer(object):
         if not hasattr(self, 'name'):
             raise ValueError('Timer instance must be called and provided a '
                              '`name` value')
+        if self.disabled():
+            return None
+
         self.start = time.time()
         self.result = TimerResult()
         return self.result
 
     def __exit__(self, typ, value, tb):
+        if self.disabled():
+            return False
+
         dt = time.time() - self.start
         dt = int(round(dt * 1000))  # Convert to ms.
         self.result.ms = dt
@@ -124,7 +136,7 @@ class MetlogClient(object):
 
     env_version = '0.8'
 
-    def __init__(self, sender, logger='', severity=6):
+    def __init__(self, sender, logger='', severity=6, disabled_timers=[]):
         """
         :param sender: A sender object used for actual message delivery.
         :param logger: Default `logger` value for all sent messages.
@@ -134,6 +146,8 @@ class MetlogClient(object):
         self.logger = logger
         self.severity = severity
         self._dynamic_methods = {}
+
+        self._disabled_timers = set(disabled_timers)
 
     def send_message(self, msg):
         # Just a handy shortcut so that proxies don't have to talk to
@@ -241,7 +255,8 @@ def setup_client(sender_clsname, **kwargs):
             del kwargs[key]
 
     if len(kwargs) > 0:
-        raise SyntaxError('Unexpected keywords passed into setup_client: %s' % str(kwargs))
+        msg = 'Unexpected keywords passed into setup_client: %s' % str(kwargs)
+        raise SyntaxError(msg)
 
     resolver = DottedNameResolver()
     sender_cls = resolver.resolve(sender_clsname)
