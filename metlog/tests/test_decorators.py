@@ -188,6 +188,17 @@ class TestDecoratorArgs(unittest.TestCase):
                 'env_version': '0.8'}
         assert actual == expected
 
+        @incr_count(name='qdo.foo', count=5, timestamp=0, logger='somelogger',
+                severity=2, bad_arg=42)
+        def invalid(x, y):
+            return x + y
+
+        try:
+            invalid(3, 5)
+            raise AssertionError("bad_arg should've been rejected")
+        except TypeError, te:
+            pass
+
     def test_arg_timeit(self):
         '''
         Test timeit support arguments
@@ -209,4 +220,16 @@ class TestDecoratorArgs(unittest.TestCase):
             'name': 'qdo.timeit', 'atext': 'foo'}, 'logger': 'timeit_logger',
             'type': 'timer', 'payload': '0', 'env_version': '0.8'}
         assert actual == expected
+
+
+        @timeit(name='qdo.timeit', timestamp=8231, logger='timeit_logger',
+                severity=5, fields={'anumber': 42, 'atext': 'foo'}, bad_arg=7)
+        def invalid(x, y):
+            return x + y
+
+        try:
+            invalid(3, 5)
+            raise AssertionError("bad_arg should've been rejected")
+        except TypeError, te:
+            pass
 
