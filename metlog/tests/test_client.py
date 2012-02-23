@@ -218,3 +218,32 @@ class TestDisabledTimer(object):
         eq_(full_msg['fields']['name'], name)
         eq_(full_msg['fields']['rate'], 1)
 
+
+    def test_disable_all_timers(self):
+        name = 'test'
+
+        @self.client.timer(name)
+        def foo():
+            time.sleep(0.01)
+        foo()
+
+        assert len(self.client.sender.msgs) == 1
+        msg = json.loads(self.client.sender.msgs[0])
+
+        full_msg = self._extract_full_msg()
+        assert int(full_msg['payload']) > 10
+        eq_(full_msg['type'], 'timer')
+        eq_(full_msg['fields']['name'], name)
+        eq_(full_msg['fields']['rate'], 1)
+
+        # Now disable everything
+        self.client._disabled_timers.add('*')
+        self.client.sender.msgs.clear()
+
+        @self.client.timer(name)
+        def foo():
+            time.sleep(0.01)
+        foo()
+
+        assert len(self.mock_sender.msgs) == 0
+
