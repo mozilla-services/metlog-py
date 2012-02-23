@@ -246,6 +246,10 @@ def setup_client(sender_clsname, **kwargs):
     """
     Configure a sender and extensions to Metlog in one shot
     """
+    logger = kwargs.get('logger', '')
+    severity = kwargs.get('severity', 6)
+    disabled_timers = kwargs.get('disabled_timers', [])
+
     sender_args = kwargs.get('sender_args', [])
     sender_kwargs = kwargs.get('sender_kwargs', {})
     extensions = kwargs.get('extensions', {})
@@ -261,7 +265,8 @@ def setup_client(sender_clsname, **kwargs):
     resolver = DottedNameResolver()
     sender_cls = resolver.resolve(sender_clsname)
 
-    mclient = MetlogClient(sender=sender_cls(*sender_args, **sender_kwargs))
+    sender=sender_cls(*sender_args, **sender_kwargs)
+    mclient = MetlogClient(sender, logger, severity, disabled_timers)
 
     for name, func_name in extensions.items():
         func = resolver.resolve(func_name)
