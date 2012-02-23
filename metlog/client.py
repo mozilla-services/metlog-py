@@ -72,7 +72,7 @@ class _Timer(object):
 
     def disabled(self):
         if hasattr(self.client, '_disabled_timers'):
-            return self.name in self.client._disabled_timers
+            return '*' in self.client._disabled_timers or self.name in self.client._disabled_timers
         return False
 
     def __call__(self, name, timestamp=None, logger=None, severity=None,

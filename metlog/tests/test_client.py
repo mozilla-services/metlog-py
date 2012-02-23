@@ -141,6 +141,7 @@ class TestDisabledTimer(object):
         # overwrite the class-wide threadlocal w/ an instance one
         # so values won't persist btn tests
         self.client.timer._local = threading.local()
+        self.client.sender.msgs.clear()
 
     def test_timer_contextmanager(self):
         name = 'test'
@@ -172,3 +173,48 @@ class TestDisabledTimer(object):
         eq_(full_msg['type'], 'timer')
         eq_(full_msg['fields']['name'], name)
         eq_(full_msg['fields']['rate'], 1)
+
+
+    def test_timer_decorator(self):
+        name = 'test'
+
+        @self.client.timer(name)
+        def foo():
+            time.sleep(0.01)
+        foo()
+
+        assert len(self.client.sender.msgs) == 1
+        msg = json.loads(self.client.sender.msgs[0])
+
+        full_msg = self._extract_full_msg()
+        assert int(full_msg['payload']) > 10
+        eq_(full_msg['type'], 'timer')
+        eq_(full_msg['fields']['name'], name)
+        eq_(full_msg['fields']['rate'], 1)
+
+        # Now disable it
+        self.client._disabled_timers.add('test')
+        self.client.sender.msgs.clear()
+
+        @self.client.timer(name)
+        def foo():
+            time.sleep(0.01)
+        foo()
+
+        assert len(self.mock_sender.msgs) == 0
+
+        # Now re-enable it
+        self.client._disabled_timers.remove('test')
+        self.client.sender.msgs.clear()
+
+        @self.client.timer('test')
+        def foo():
+            time.sleep(0.01)
+        foo()
+
+        full_msg = self._extract_full_msg()
+        assert int(full_msg['payload']) > 10
+        eq_(full_msg['type'], 'timer')
+        eq_(full_msg['fields']['name'], name)
+        eq_(full_msg['fields']['rate'], 1)
+
