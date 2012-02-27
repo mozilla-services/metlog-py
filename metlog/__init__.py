@@ -7,3 +7,4 @@
 
 
 from metlog.classic import logger
+from metlog.helper import HELPER
