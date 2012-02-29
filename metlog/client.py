@@ -69,6 +69,12 @@ class _Timer(object):
         """Store thread-local data safely."""
         setattr(self._local, attr, value)
 
+
+    def disabled(self):
+        if hasattr(self.client, '_disabled_timers'):
+            return '*' in self.client._disabled_timers or self.name in self.client._disabled_timers
+        return False
+
     def __call__(self, name, timestamp=None, logger=None, severity=None,
                  fields=None, rate=1):
         """
@@ -103,11 +109,17 @@ class _Timer(object):
         if not hasattr(self, 'name'):
             raise ValueError('Timer instance must be called and provided a '
                              '`name` value')
+        if self.disabled():
+            return None
+
         self.start = time.time()
         self.result = TimerResult()
         return self.result
 
     def __exit__(self, typ, value, tb):
+        if self.disabled():
+            return False
+
         dt = time.time() - self.start
         dt = int(round(dt * 1000))  # Convert to ms.
         self.result.ms = dt
@@ -124,7 +136,7 @@ class MetlogClient(object):
 
     env_version = '0.8'
 
-    def __init__(self, sender, logger='', severity=6):
+    def __init__(self, sender, logger='', severity=6, disabled_timers=[]):
         """
         :param sender: A sender object used for actual message delivery.
         :param logger: Default `logger` value for all sent messages.
@@ -134,6 +146,8 @@ class MetlogClient(object):
         self.logger = logger
         self.severity = severity
         self._dynamic_methods = {}
+
+        self._disabled_timers = set(disabled_timers)
 
     def send_message(self, msg):
         # Just a handy shortcut so that proxies don't have to talk to
@@ -227,24 +241,35 @@ class MetlogClient(object):
         self.metlog('counter', timestamp, logger, severity, payload, fields)
 
 
-class ClientFactory(object):
-    '''
-    This class generates a MetlogClient instance wrapped in a proxy
-    class with caller specified extensions
-    '''
 
-    @classmethod
-    def client(cls, sender_clsname, sender_args=[], sender_kwargs={}, extensions={}):
-        """
-        Configure a sender and extensions to Metlog in one shot
-        """
-        resolver = DottedNameResolver()
-        sender_cls = resolver.resolve(sender_clsname)
+def setup_client(sender_clsname, **kwargs):
+    """
+    Configure a sender and extensions to Metlog in one shot
+    """
+    logger = kwargs.get('logger', '')
+    severity = kwargs.get('severity', 6)
+    disabled_timers = kwargs.get('disabled_timers', [])
 
-        mclient = MetlogClient(sender=sender_cls(*sender_args, **sender_kwargs))
+    sender_args = kwargs.get('sender_args', [])
+    sender_kwargs = kwargs.get('sender_kwargs', {})
+    extensions = kwargs.get('extensions', {})
 
-        for name, func_name in extensions.items():
-            func = resolver.resolve(func_name)
-            mclient.add_method(name, func)
+    for key in ['sender_args', 'sender_kwargs', 'extensions']:
+        if key in kwargs:
+            del kwargs[key]
 
-        return mclient
+    if len(kwargs) > 0:
+        msg = 'Unexpected keywords passed into setup_client: %s' % str(kwargs)
+        raise SyntaxError(msg)
+
+    resolver = DottedNameResolver()
+    sender_cls = resolver.resolve(sender_clsname)
+
+    sender=sender_cls(*sender_args, **sender_kwargs)
+    mclient = MetlogClient(sender, logger, severity, disabled_timers)
+
+    for name, func_name in extensions.items():
+        func = resolver.resolve(func_name)
+        mclient.add_method(name, func)
+
+    return mclient

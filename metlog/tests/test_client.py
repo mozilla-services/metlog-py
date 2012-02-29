@@ -15,9 +15,15 @@ from datetime import datetime
 from metlog.client import MetlogClient
 from mock import Mock
 from nose.tools import eq_, ok_
+from metlog.senders.dev import DebugCaptureSender
 
 import threading
 import time
+
+try:
+    import simplejson as json
+except:
+    import json
 
 
 class TestMetlogClient(object):
@@ -121,3 +127,123 @@ class TestMetlogClient(object):
         self.client.incr(name, 10)
         full_msg = self._extract_full_msg()
         eq_(full_msg['payload'], '10')
+
+
+class TestDisabledTimer(object):
+    logger = 'tests'
+
+    def _extract_full_msg(self):
+        return json.loads(self.mock_sender.msgs[0])
+
+    def setUp(self):
+        self.mock_sender = DebugCaptureSender()
+        self.client = MetlogClient(self.mock_sender, self.logger)
+        # overwrite the class-wide threadlocal w/ an instance one
+        # so values won't persist btn tests
+        self.client.timer._local = threading.local()
+        self.client.sender.msgs.clear()
+
+    def test_timer_contextmanager(self):
+        name = 'test'
+        with self.client.timer(name) as result:
+            time.sleep(0.01)
+
+        ok_(result.ms >= 10)
+        full_msg = self._extract_full_msg()
+        eq_(full_msg['payload'], str(result.ms))
+        eq_(full_msg['type'], 'timer')
+        eq_(full_msg['fields']['name'], name)
+        eq_(full_msg['fields']['rate'], 1)
+
+        # Now disable it
+        self.client._disabled_timers.add('test')
+        with self.client.timer('test') as result:
+            time.sleep(0.01)
+        assert result is None
+
+        # Now re-enable it
+        self.client._disabled_timers.remove('test')
+        self.client.sender.msgs.clear()
+        with self.client.timer('test') as result:
+            time.sleep(0.01)
+
+        ok_(result.ms >= 10)
+        full_msg = self._extract_full_msg()
+        eq_(full_msg['payload'], str(result.ms))
+        eq_(full_msg['type'], 'timer')
+        eq_(full_msg['fields']['name'], name)
+        eq_(full_msg['fields']['rate'], 1)
+
+
+    def test_timer_decorator(self):
+        name = 'test'
+
+        @self.client.timer(name)
+        def foo():
+            time.sleep(0.01)
+        foo()
+
+        assert len(self.client.sender.msgs) == 1
+        msg = json.loads(self.client.sender.msgs[0])
+
+        full_msg = self._extract_full_msg()
+        assert int(full_msg['payload']) > 10
+        eq_(full_msg['type'], 'timer')
+        eq_(full_msg['fields']['name'], name)
+        eq_(full_msg['fields']['rate'], 1)
+
+        # Now disable it
+        self.client._disabled_timers.add('test')
+        self.client.sender.msgs.clear()
+
+        @self.client.timer(name)
+        def foo():
+            time.sleep(0.01)
+        foo()
+
+        assert len(self.mock_sender.msgs) == 0
+
+        # Now re-enable it
+        self.client._disabled_timers.remove('test')
+        self.client.sender.msgs.clear()
+
+        @self.client.timer('test')
+        def foo():
+            time.sleep(0.01)
+        foo()
+
+        full_msg = self._extract_full_msg()
+        assert int(full_msg['payload']) > 10
+        eq_(full_msg['type'], 'timer')
+        eq_(full_msg['fields']['name'], name)
+        eq_(full_msg['fields']['rate'], 1)
+
+
+    def test_disable_all_timers(self):
+        name = 'test'
+
+        @self.client.timer(name)
+        def foo():
+            time.sleep(0.01)
+        foo()
+
+        assert len(self.client.sender.msgs) == 1
+        msg = json.loads(self.client.sender.msgs[0])
+
+        full_msg = self._extract_full_msg()
+        assert int(full_msg['payload']) > 10
+        eq_(full_msg['type'], 'timer')
+        eq_(full_msg['fields']['name'], name)
+        eq_(full_msg['fields']['rate'], 1)
+
+        # Now disable everything
+        self.client._disabled_timers.add('*')
+        self.client.sender.msgs.clear()
+
+        @self.client.timer(name)
+        def foo():
+            time.sleep(0.01)
+        foo()
+
+        assert len(self.mock_sender.msgs) == 0
+

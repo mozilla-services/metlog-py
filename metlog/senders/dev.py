@@ -12,7 +12,7 @@
 #
 # ***** END LICENSE BLOCK *****
 try:
-    import simplesjson as json
+    import simplejson as json
 except ImportError:
     import json  # NOQA
 import sys
