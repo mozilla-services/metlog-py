@@ -6,15 +6,13 @@
 # ***** END LICENSE BLOCK *****
 
 import unittest
+from metlog.config import client_from_text_config
 from metlog.client import MetlogClient
-from metlog.helper import HELPER
+from metlog.decorators.base import CLIENT_WRAPPER
 from metlog.exceptions import MethodNotFoundError
-from metlog.config import Config
-from metlog.decorators import apache_log
 from metlog.decorators import incr_count
 from metlog.decorators import timeit
-from metlog.decorators import get_tlocal
-from metlog.decorators.util import rebind_dispatcher
+from metlog.decorators.base import rebind_dispatcher
 
 try:
     import simplejson as json
@@ -24,20 +22,20 @@ except:
 
 class TestCannedDecorators(unittest.TestCase):
     def setUp(self):
-        config = Config("""
+        client = client_from_text_config("""
         [test1]
         enabled=true
-        sender_backend=metlog.senders.DebugCaptureSender
+        sender_class=metlog.senders.DebugCaptureSender
         """, 'test1')
-        HELPER.configure(config)
+        CLIENT_WRAPPER.client = client
 
     def test_decorator_ordering(self):
         '''
         decorator ordering may matter when Ops goes to look at the
         logs. Make sure we capture stuff in the right order
         '''
-        HELPER._client.sender.msgs.clear()
-        assert len(HELPER._client.sender.msgs) == 0
+        CLIENT_WRAPPER.client.sender.msgs.clear()
+        assert len(CLIENT_WRAPPER.client.sender.msgs) == 0
 
         @incr_count
         @timeit
@@ -45,7 +43,7 @@ class TestCannedDecorators(unittest.TestCase):
             return x + y
 
         ordering_1(5, 6)
-        msgs = [json.loads(m) for m in HELPER._client.sender.msgs]
+        msgs = [json.loads(m) for m in CLIENT_WRAPPER.client.sender.msgs]
         assert len(msgs) == 2
 
         for msg in msgs:
@@ -58,8 +56,8 @@ class TestCannedDecorators(unittest.TestCase):
         assert msgs[0]['type'] == 'timer'
         assert msgs[1]['type'] == 'counter'
 
-        HELPER._client.sender.msgs.clear()
-        assert len(HELPER._client.sender.msgs) == 0
+        CLIENT_WRAPPER.client.sender.msgs.clear()
+        assert len(CLIENT_WRAPPER.client.sender.msgs) == 0
 
         @timeit
         @incr_count
@@ -67,7 +65,7 @@ class TestCannedDecorators(unittest.TestCase):
             return x + y
 
         ordering_2(5, 6)
-        msgs = [json.loads(m) for m in HELPER._client.sender.msgs]
+        msgs = [json.loads(m) for m in CLIENT_WRAPPER.client.sender.msgs]
         assert len(msgs) == 2
 
         for msg in msgs:
@@ -81,43 +79,17 @@ class TestCannedDecorators(unittest.TestCase):
         assert msgs[1]['type'] == 'timer'
 
     def test_reset_helper(self):
-        assert isinstance(HELPER._client, MetlogClient)
-        HELPER.set_client(None)
-        assert HELPER._client == None
-
-
-class TestDisabledMetrics(unittest.TestCase):
-    def setUp(self):
-        config = Config("""
-        [test1]
-        enabled=false
-        sender_backend = metlog.senders.DebugCaptureSender
-        """, 'test1')
-        HELPER.configure(config)
-        assert HELPER._client == None
-
-    def test_no_rebind(self):
-        # Test that rebinding of methods doesn't occur if metlog is
-        # completely disabled
-        class SomeClass(object):
-            @rebind_dispatcher('rebind_method')
-            def mymethod(self, x, y):
-                return x * y
-
-            def rebind_method(self, x, y):
-                return x - y
-        obj = SomeClass()
-        assert obj.mymethod(5, 6) == 30
+        assert isinstance(CLIENT_WRAPPER.client, MetlogClient)
 
 
 class TestRebindMethods(unittest.TestCase):
     def setUp(self):
-        config = Config("""
+        client = client_from_text_config("""
         [test1]
         enabled=true
-        sender_backend=metlog.senders.DebugCaptureSender
+        sender_class=metlog.senders.DebugCaptureSender
         """, 'test1')
-        HELPER.configure(config)
+        CLIENT_WRAPPER.client = client
 
     def test_bad_rebind(self):
         try:
@@ -140,26 +112,26 @@ class TestRebindMethods(unittest.TestCase):
 
 class TestDecoratorArgs(unittest.TestCase):
     def setUp(self):
-        config = Config("""
+        client = client_from_text_config("""
         [test1]
         enabled=true
-        sender_backend=metlog.senders.DebugCaptureSender
+        sender_class=metlog.senders.DebugCaptureSender
         """, 'test1')
-        HELPER.configure(config)
+        CLIENT_WRAPPER.client = client
 
     def test_arg_incr(self):
         '''
         Test incr_count support arguments
         '''
-        HELPER._client.sender.msgs.clear()
-        assert len(HELPER._client.sender.msgs) == 0
+        CLIENT_WRAPPER.client.sender.msgs.clear()
+        assert len(CLIENT_WRAPPER.client.sender.msgs) == 0
 
         @incr_count(name='qdo.foo', count=5, timestamp=0, logger='somelogger', severity=2)
         def simple(x, y):
             return x + y
 
         simple(5, 6)
-        msgs = [json.loads(m) for m in HELPER._client.sender.msgs]
+        msgs = [json.loads(m) for m in CLIENT_WRAPPER.client.sender.msgs]
         assert len(msgs) == 1
         actual= msgs[0]
 
@@ -184,8 +156,8 @@ class TestDecoratorArgs(unittest.TestCase):
         '''
         Test timeit support arguments
         '''
-        HELPER._client.sender.msgs.clear()
-        assert len(HELPER._client.sender.msgs) == 0
+        CLIENT_WRAPPER.client.sender.msgs.clear()
+        assert len(CLIENT_WRAPPER.client.sender.msgs) == 0
 
         @timeit(name='qdo.timeit', timestamp=8231, logger='timeit_logger',
                 severity=5, fields={'anumber': 42, 'atext': 'foo'}, rate=7)
@@ -193,7 +165,7 @@ class TestDecoratorArgs(unittest.TestCase):
             return x + y
 
         simple(5, 6)
-        msgs = [json.loads(m) for m in HELPER._client.sender.msgs]
+        msgs = [json.loads(m) for m in CLIENT_WRAPPER.client.sender.msgs]
         assert len(msgs) == 1 
 
         actual = msgs[0]

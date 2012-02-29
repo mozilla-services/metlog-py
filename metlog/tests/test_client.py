@@ -187,7 +187,7 @@ class TestDisabledTimer(object):
         msg = json.loads(self.client.sender.msgs[0])
 
         full_msg = self._extract_full_msg()
-        assert int(full_msg['payload']) > 10
+        assert int(full_msg['payload']) >= 10, "Got: %d" % int(full_msg['payload'])
         eq_(full_msg['type'], 'timer')
         eq_(full_msg['fields']['name'], name)
         eq_(full_msg['fields']['rate'], 1)
@@ -213,7 +213,7 @@ class TestDisabledTimer(object):
         foo()
 
         full_msg = self._extract_full_msg()
-        assert int(full_msg['payload']) > 10
+        assert int(full_msg['payload']) >= 10
         eq_(full_msg['type'], 'timer')
         eq_(full_msg['fields']['name'], name)
         eq_(full_msg['fields']['rate'], 1)
@@ -231,7 +231,7 @@ class TestDisabledTimer(object):
         msg = json.loads(self.client.sender.msgs[0])
 
         full_msg = self._extract_full_msg()
-        assert int(full_msg['payload']) > 10
+        assert int(full_msg['payload']) >= 10
         eq_(full_msg['type'], 'timer')
         eq_(full_msg['fields']['name'], name)
         eq_(full_msg['fields']['rate'], 1)
