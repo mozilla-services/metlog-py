@@ -15,12 +15,12 @@ from metlog.decorators import incr_count
 from metlog.decorators import timeit
 from metlog.decorators import get_tlocal
 from metlog.decorators.util import rebind_dispatcher
-from webob.request import Request
 
 try:
     import simplejson as json
 except:
     import json   # NOQA
+
 
 class TestCannedDecorators(unittest.TestCase):
     def setUp(self):
@@ -84,26 +84,6 @@ class TestCannedDecorators(unittest.TestCase):
         assert isinstance(HELPER._client, MetlogClient)
         HELPER.set_client(None)
         assert HELPER._client == None
-
-    def test_apache_logger(self):
-
-        HELPER._client.sender.msgs.clear()
-        msgs = HELPER._client.sender.msgs
-        assert len(msgs) == 0
-
-        @apache_log
-        def some_method(request):
-            data = get_tlocal()
-            data['foo'] = 'bar'
-
-        req = Request({'PATH_INFO': '/foo/bar',
-                       'SERVER_NAME': 'somehost.com',
-                       'SERVER_PORT': 80,
-                       })
-        some_method(req)
-        msg = json.loads(HELPER._client.sender.msgs[0])
-        assert 'foo' in msg['fields']['threadlocal']
-        assert msg['fields']['threadlocal']['foo'] == 'bar'
 
 
 class TestDisabledMetrics(unittest.TestCase):
@@ -183,9 +163,10 @@ class TestDecoratorArgs(unittest.TestCase):
         assert len(msgs) == 1
         actual= msgs[0]
 
-        expected = {'severity': 2, 'timestamp': 0, 'fields': {'name': 'qdo.foo'},
-                'logger': 'somelogger', 'type': 'counter', 'payload': '5',
-                'env_version': '0.8'}
+        expected = {'severity': 2, 'timestamp': 0,
+                    'fields': {'name': 'qdo.foo'},
+                    'logger': 'somelogger', 'type': 'counter',
+                    'payload': '5', 'env_version': '0.8'}
         assert actual == expected
 
         @incr_count(name='qdo.foo', count=5, timestamp=0, logger='somelogger',

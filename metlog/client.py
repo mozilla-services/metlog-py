@@ -2,7 +2,7 @@
 # This Source Code Form is subject to the terms of the Mozilla Public
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at http://mozilla.org/MPL/2.0/.
-
+#
 # The Initial Developer of the Original Code is the Mozilla Foundation.
 # Portions created by the Initial Developer are Copyright (C) 2012
 # the Initial Developer. All Rights Reserved.
@@ -18,7 +18,6 @@ import random
 import threading
 import time
 import types
-from metlog.path import DottedNameResolver
 
 from datetime import datetime
 from functools import wraps
@@ -69,10 +68,10 @@ class _Timer(object):
         """Store thread-local data safely."""
         setattr(self._local, attr, value)
 
-
     def disabled(self):
         if hasattr(self.client, '_disabled_timers'):
-            return '*' in self.client._disabled_timers or self.name in self.client._disabled_timers
+            return ('*' in self.client._disabled_timers
+                    or self.name in self.client._disabled_timers)
         return False
 
     def __call__(self, name, timestamp=None, logger=None, severity=None,
@@ -133,7 +132,6 @@ class MetlogClient(object):
     Client class encapsulating metlog API, and providing storage for default
     values for various metlog call settings.
     """
-
     env_version = '0.8'
 
     def __init__(self, sender, logger='', severity=6, disabled_timers=[]):
@@ -146,7 +144,6 @@ class MetlogClient(object):
         self.logger = logger
         self.severity = severity
         self._dynamic_methods = {}
-
         self._disabled_timers = set(disabled_timers)
 
     def send_message(self, msg):
@@ -155,17 +152,19 @@ class MetlogClient(object):
         self.sender.send_message(msg)
 
     def add_method(self, name, method):
-        """ Extend the MetlogClient with a new method and bind it. """
+        """
+        Add a custom method to the MetlogClient instance.
 
+        :param name: Name to use for the method.
+        :param method: Callable that will be used as the method.
+        """
         assert isinstance(method, types.FunctionType)
-        if name in dir(self):
-            msg = "The name [%s] is already bound into the proxy" % name
+        if hasattr(self, name):
+            msg = "The name [%s] is already in use" % name
             raise SyntaxError(msg)
-
         self._dynamic_methods[name] = method
-
         meth = types.MethodType(method, self, self.__class__)
-        self.__dict__[name] = meth
+        setattr(self, name, meth)
 
     @property
     def timer(self):
@@ -240,36 +239,22 @@ class MetlogClient(object):
         fields['name'] = name
         self.metlog('counter', timestamp, logger, severity, payload, fields)
 
+    # Standard Python logging API emulation
+    def debug(self, msg):
+        self.metlog(type='oldstyle', severity=SEVERITY.DEBUG, payload=msg)
 
+    def info(self, msg):
+        self.metlog(type='oldstyle', severity=SEVERITY.INFORMATIONAL,
+                    payload=msg)
 
-def setup_client(sender_clsname, **kwargs):
-    """
-    Configure a sender and extensions to Metlog in one shot
-    """
-    logger = kwargs.get('logger', '')
-    severity = kwargs.get('severity', 6)
-    disabled_timers = kwargs.get('disabled_timers', [])
+    def warn(self, msg):
+        self.metlog(type='oldstyle', severity=SEVERITY.WARNING, payload=msg)
 
-    sender_args = kwargs.get('sender_args', [])
-    sender_kwargs = kwargs.get('sender_kwargs', {})
-    extensions = kwargs.get('extensions', {})
+    def error(self, msg):
+        self.metlog(type='oldstyle', severity=SEVERITY.ERROR, payload=msg)
 
-    for key in ['sender_args', 'sender_kwargs', 'extensions']:
-        if key in kwargs:
-            del kwargs[key]
+    def exception(self, msg):
+        self.metlog(type='oldstyle', severity=SEVERITY.ALERT, payload=msg)
 
-    if len(kwargs) > 0:
-        msg = 'Unexpected keywords passed into setup_client: %s' % str(kwargs)
-        raise SyntaxError(msg)
-
-    resolver = DottedNameResolver()
-    sender_cls = resolver.resolve(sender_clsname)
-
-    sender=sender_cls(*sender_args, **sender_kwargs)
-    mclient = MetlogClient(sender, logger, severity, disabled_timers)
-
-    for name, func_name in extensions.items():
-        func = resolver.resolve(func_name)
-        mclient.add_method(name, func)
-
-    return mclient
+    def critical(self, msg):
+        self.metlog(type='oldstyle', severity=SEVERITY.CRITICAL, payload=msg)
