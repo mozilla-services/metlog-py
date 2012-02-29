@@ -32,7 +32,7 @@ def log_cef(self, name, severity, environ, config, username='none',
                         signature=signature, **kw)
     msg = _format_msg(fields, kw)
 
-    self.metlog(type='cef', payload=msg)
+    self.metlog(type='cef', fields={'logtext': msg})
 
     # Return the formatted message
     return msg

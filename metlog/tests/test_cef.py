@@ -94,7 +94,7 @@ class TestCEFLogger(unittest.TestCase):
         msgs.clear()
         # We only care about the CEF payload
         assert msg['type'] == 'cef'
-        return msg['payload']
+        return msg['fields']['logtext']
 
     def test_cef_logging(self):
         # should not fail

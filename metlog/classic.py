@@ -31,7 +31,8 @@ class SimpleLogger(object):
         '''
         self._client.metlog(type='oldstyle',
                 logger=self._logger_name,
-                severity=level, payload=msg)
+                fields={'logtext': msg},
+                severity=level)
 
     @rebind_dispatcher('metlog_log')
     def _log(self, msg, level):

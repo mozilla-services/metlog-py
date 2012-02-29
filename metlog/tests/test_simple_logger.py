@@ -41,7 +41,7 @@ class TestSimpleLogger(unittest.TestCase):
             timer_call = msgs[0]
             assert timer_call['logger'] == 'anonymous'
             assert timer_call['type'] == 'oldstyle'
-            assert timer_call['payload'] == 'some %s' % msg
+            assert timer_call['fields']['logtext'] == 'some %s' % msg
             assert timer_call['severity'] == lvl
 
             HELPER._client.sender.msgs.clear()
