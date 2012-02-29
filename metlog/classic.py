@@ -53,6 +53,8 @@ class SimpleLogger(object):
     def warn(self, msg):
         self._log(msg, SEVERITY.WARNING)
 
+    warning = warn
+
     def error(self, msg):
         self._log(msg, SEVERITY.ERROR)
 
