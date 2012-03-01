@@ -14,7 +14,6 @@
 # ***** END LICENSE BLOCK *****
 from metlog.config import client_from_text_config
 from metlog.decorators.base import CLIENT_WRAPPER
-from metlog.exceptions import MethodNotFoundError
 from metlog.decorators import incr_count
 from metlog.decorators import timeit
 from nose.tools import eq_, raises
@@ -77,20 +76,6 @@ class TestCannedDecorators(DecoratorTestBase):
         # ordering of decoration
         eq_(msgs[0]['type'], 'counter')
         eq_(msgs[1]['type'], 'timer')
-
-
-class XTestRebindMethods(DecoratorTestBase):
-    @raises(MethodNotFoundError)
-    def xtest_bad_rebind(self):
-        class BarClass(object):
-            def mymethod(self, x, y):
-                return x * y
-
-            def foo(self, x, y):
-                pass
-
-        foo = BarClass()
-        foo.mymethod(5, 6)
 
 
 class TestDecoratorArgs(DecoratorTestBase):
@@ -159,3 +144,24 @@ class TestDisabledDecorators(DecoratorTestBase):
         msgs = [json.loads(m) for m in CLIENT_WRAPPER.client.sender.msgs]
         eq_(len(msgs), 0)
         CLIENT_WRAPPER._disabled_decorators = orig_disabled
+
+    def test_specific_timer_disabled(self):
+        @timeit
+        def simple(x, y):
+            return x + y
+
+        @timeit
+        def simple2(x, y):
+            return x + y
+
+        orig_disabled = CLIENT_WRAPPER.client._disabled_timers
+        omit = ('metlog.tests.test_decorators:simple')
+        CLIENT_WRAPPER.client._disabled_timers = set([omit])
+
+        simple(1, 2)
+        simple2(3, 4)
+        msgs = [json.loads(m) for m in CLIENT_WRAPPER.client.sender.msgs]
+        eq_(len(msgs), 1)
+        eq_(msgs[0]['fields']['name'], 'metlog.tests.test_decorators:simple2')
+
+        CLIENT_WRAPPER.client._disabled_timers = orig_disabled
