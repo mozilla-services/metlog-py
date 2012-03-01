@@ -24,8 +24,6 @@ originally evaluated, but then to be wrapped differently once the config has
 loaded and the desired final behavior has been established.
 """
 from metlog.decorators.util import return_fq_name
-from metlog.exceptions import MethodNotFoundError
-import functools
 
 
 class MetlogClientWrapper(object):
@@ -38,9 +36,9 @@ class MetlogClientWrapper(object):
     def __init__(self):
         self.client = None
         # Track any disabled loggers
-        self._disabled_decorators = {}
+        self._disabled_decorators = set()
 
-    def activate(self, client, disabled_decorators):
+    def activate(self, client, disabled_decorators=None):
         """
         This method needs to be called to actually enable Metlog decorators
         set up using `_rebind_dispatcher` and the MetlogDecorator base class
@@ -52,6 +50,8 @@ class MetlogClientWrapper(object):
                                     that should not be enabled.
         """
         self.client = client
+        if disabled_decorators is None:
+            disabled_decorators = []
         self._disabled_decorators = set(disabled_decorators)
 
     @property
@@ -65,86 +65,81 @@ class MetlogClientWrapper(object):
 CLIENT_WRAPPER = MetlogClientWrapper()
 
 
-def rebind_dispatcher(alt_method_name, decorator_name=None, predicate=None):
-    """
-    This decorator can only be used on the `__call__` method of a decorator
-    class.  It will conditionally rebind an alternate method on the same
-    decorator class in place of whatever is returned by the `__call__` method
-    if metlog is enabled for the specified decorator name.
-
-    :param alt_method_name: Name of the alternate decorator class method to
-                            use in case the rebinding actually happens.
-    :param decorator_name: Name of this decorator to be compared against set
-                           of disabled metlog decorators (i.e. decorators not
-                           to rebind).
-    :param predicate: A function that will be called before the rebinding. If
-                      the predicate returns a False value, rebinding will not
-                      happen. If `predicate` is not a callable, it will be
-                      assumed to be the name of a method on the decorator
-                      class.
-    """
-    def wrapped(func):
-        @functools.wraps(func)
-        def inner(*args, **kwargs):
-            klass = args[0].__class__  # decorator class
-            do_rebind = True
-
-            if not CLIENT_WRAPPER.is_activated:
-                do_rebind = False
-            elif CLIENT_WRAPPER.decorator_is_disabled(decorator_name):
-                do_rebind = False
-            elif predicate is not None:
-                real_pred = predicate
-                if not callable(real_pred):
-                    real_pred = getattr(args[0], predicate, None)
-                    if real_pred is None:
-                        msg = 'No such method: [%s]' % predicate
-                        raise MethodNotFoundError(msg)
-                if not real_pred():
-                    do_rebind = False
-
-            if do_rebind:
-                # Rebind the alternate method as the decorator instead of the
-                # `__call__` method
-                alt_method = getattr(klass, alt_method_name, None)
-                if not alt_method:
-                    msg = 'No such method: [%s]' % alt_method_name
-                    raise MethodNotFoundError(msg)
-                setattr(klass, func.__name__, alt_method)
-                return alt_method(*args, **kwargs)
-            else:
-                # Retain the `__call__` method as the decorator
-                setattr(klass, func.__name__, func)
-                return func(*args, **kwargs)
-
-        return inner
-    return wrapped
-
-
 class MetlogDecorator(object):
     """
     This is a base class for Metlog decorators, designed to support 'rebinding'
-    of the actual decorated method once Metlog configuration has actually been
-    loaded.
+    of the actual decorator method once Metlog configuration has actually been
+    loaded. The first time the decorated function is invoked, the `predicate`
+    method will be called. If the result is True, then `metlog_call` (intended
+    to be implemented by subclasses) will be used as the decorator. If the
+    `predicate` returns False, then `_invoke` (which by default does nothing
+    but call the wrapped function) will be used as the decorator.
     """
-    def set_fn(self, fn):
-        self._fn = fn
-        if self._fn is None:
-            return
-
-        if isinstance(fn, MetlogDecorator):
-            if hasattr(fn, '_metrics_fn_code'):
-                self._metrics_fn_code = fn._metrics_fn_code
-            self._method_name = fn._method_name
+    def __init__(self, *args, **kwargs):
+        if len(args) == 1 and len(kwargs) == 0 and callable(args[0]):
+            # bare decorator, i.e. no arguments
+            self.set_fn(args[0])
+            self.args = None
+            self.kwargs = None
         else:
-            if hasattr(self._fn, 'func_code'):
-                self._metrics_fn_code = getattr(self._fn, 'func_code')
-            self._method_name = return_fq_name(self._fn)
+            # we're instantiated w/ arguments that will need to be passed on to
+            # the actual metlog call
+            self.set_fn(None)
+            self.args = args[1:]
+            self.kwargs = kwargs
+
+    @property
+    def decorator_name(self):
+        return self.__class__.__name__
+
+    def predicate(self):
+        if not CLIENT_WRAPPER.is_activated:
+            return False
+        if CLIENT_WRAPPER.decorator_is_disabled(self.decorator_name):
+            return False
+        return True
+
+    def set_fn(self, fn):
+        """
+        Sets the function and stores the full dotted notation fn name for later
+        use.
+        """
+        self._fn = fn
+        if fn is None:
+            self._fn_fq_name = None
+        elif isinstance(fn, MetlogDecorator):
+            self._fn_fq_name = fn._fn_fq_name
+        else:
+            self._fn_fq_name = return_fq_name(fn)
+
+    def __call__(self, *args, **kwargs):
+        """
+        Sorta dirty stuff happening in here. The first time the wrapped
+        function is called, this method will replace itself, so that later
+        calls to the wrapped function will invoke a different decorator.
+        """
+        if (self._fn is None and len(args) == 1 and len(kwargs) == 0
+            and callable(args[0])):
+            # we were instantiated w/ args, now we have to wrap the function
+            self.set_fn(args[0])
+            return self
+        # we get here in the first actual invocation of the wrapped function
+        if self.predicate():
+            replacement = self.metlog_call
+        else:
+            replacement = self._invoke
+        self.__call__ = replacement
+        return replacement(*args, **kwargs)
 
     @property
     def __name__(self):
-        """Support the use of functools.wraps"""
+        """Support the use of functools.wraps."""
         return self._fn.__name__
 
     def _invoke(self, *args, **kwargs):
+        """Call the wrapped function."""
         return self._fn(*args, **kwargs)
+
+    def metlog_call(self, *args, **kwargs):
+        """Actual metlog activity happens here. Implemented by subclasses."""
+        raise NotImplementedError

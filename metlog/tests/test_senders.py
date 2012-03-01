@@ -12,6 +12,7 @@
 #
 # ***** END LICENSE BLOCK *****
 from metlog.senders import ZmqPubSender, zmq
+from metlog.senders import StdOutSender
 from mock import patch
 from nose.plugins.skip import SkipTest
 from nose.tools import eq_
@@ -56,3 +57,16 @@ class TestZmqPubSender(object):
         publisher = self.sender.publisher
         publisher.connect.assert_called_with('bindstr')
         publisher.send.assert_called_with(json_msg)
+
+
+@patch('sys.stdout')
+def test_stdout_sender(mock_stdout):
+    msg = {'this': 'is',
+           'a': 'test',
+           'payload': 'PAYLOAD'}
+    json_msg = json.dumps(msg)
+    sender = StdOutSender()
+    sender.send_message(msg)
+    eq_(mock_stdout.write.call_count, 1)
+    eq_(mock_stdout.flush.call_count, 1)
+    mock_stdout.write.assert_called_with(json_msg + '\n')

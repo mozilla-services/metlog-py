@@ -13,48 +13,26 @@
 #
 # ***** END LICENSE BLOCK *****
 from metlog.decorators.base import CLIENT_WRAPPER, MetlogDecorator
-from metlog.decorators.base import rebind_dispatcher
 
 
 class timeit(MetlogDecorator):
     """
     Lazily decorate any callable with a metlog timer.
     """
-    def __init__(self, *args, **kwargs):
-        if len(args) == 1 and len(kwargs) == 0 and callable(args[0]):
-            fn = args[0]
-            self.set_fn(fn)
-            self.kwargs = {'name': self._method_name}
-        else:
-            self.set_fn(None)
-            self.kwargs = kwargs
-
-    def is_timer_enabled(self):
+    def predicate(self):
         client = CLIENT_WRAPPER.client
-        if client is None:
-            # no client -> we shouldn't even get here
+        if (self._fn.__name__ in client._disabled_timers or
+            '*' in client._disabled_timers):
             return False
-        if self._method_name in CLIENT_WRAPPER.client._disabled_timers:
-            return False
-        if '*' in CLIENT_WRAPPER.client._disabled_timers:
-            return False
-        return True
-
-    @rebind_dispatcher('metlog_call', decorator_name='timeit',
-                       predicate='is_timer_enabled')
-    def __call__(self, *args, **kwargs):
-        if self._fn is None and callable(args[0]):
-            self.set_fn(args[0])
-            return self
-        return self._invoke(*args, **kwargs)
+        return super(timeit, self).predicate()
 
     def metlog_call(self, *args, **kwargs):
-        if self._fn is None and callable(args[0]):
-            self.set_fn(args[0])
-            return self
-
-        with CLIENT_WRAPPER.client.timer(**self.kwargs):
-            return self._invoke(*args, **kwargs)
+        if self.args is None:
+            self.args = tuple()
+        if self.kwargs is None:
+            self.kwargs = {'name': self._fn_fq_name}
+        with CLIENT_WRAPPER.client.timer(*self.args, **self.kwargs):
+            return self._fn(*args, **kwargs)
 
 
 class incr_count(MetlogDecorator):
@@ -62,28 +40,13 @@ class incr_count(MetlogDecorator):
     Lazily decorate any callable w/ a wrapper that will increment a metlog
     counter whenever the callable is invoked.
     """
-    def __init__(self, *args, **kwargs):
-        if len(args) == 1 and len(kwargs) == 0 and callable(args[0]):
-            fn = args[0]
-            self.set_fn(fn)
-            self.kwargs = {'name': self._method_name, 'count': 1}
-        else:
-            self.set_fn(None)
-            self.kwargs = kwargs
-
-    @rebind_dispatcher('metlog_call')
-    def __call__(self, *args, **kwargs):
-        if self._fn is None and callable(args[0]):
-            self.set_fn(args[0])
-            return self
-        return self._invoke(*args, **kwargs)
-
     def metlog_call(self, *args, **kwargs):
-        if self._fn is None and callable(args[0]):
-            self.set_fn(args[0])
-            return self
+        if self.args is None:
+            self.args = tuple()
+        if self.kwargs is None:
+            self.kwargs = {'name': self._fn_fq_name, 'count': 1}
         try:
-            result = self._invoke(*args, **kwargs)
+            result = self._fn(*args, **kwargs)
         finally:
-            CLIENT_WRAPPER.client.incr(**self.kwargs)
+            CLIENT_WRAPPER.client.incr(*self.args, **self.kwargs)
         return result
