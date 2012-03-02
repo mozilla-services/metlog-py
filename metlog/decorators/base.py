@@ -13,15 +13,15 @@
 #
 # ***** END LICENSE BLOCK *****
 """
-This module contains a Metlog decorator base class and some helper functions
-and classes. The primary reason for these abstractions is 'deferred
-configuration'. Decorators are evaluated by Python at import time, but often
-the configuration needed for a Metlog client, which might change (or negate)
-the behavior of a Metlog decorator, isn't available until later, after some
-config parsing code has executed. This code provides a mechanism to have a
-function get wrapped in one way (or not at all) when the decorator is
-originally evaluated, but then to be wrapped differently once the config has
-loaded and the desired final behavior has been established.
+This module contains a Metlog decorator base class and some additional helper
+code. The primary reason for these abstractions is 'deferred configuration'.
+Decorators are evaluated by Python at import time, but often the configuration
+needed for a Metlog client, which might negate (or change) the behavior of a
+Metlog decorator, isn't available until later, after some config parsing code
+has executed. This code provides a mechanism to have a function get wrapped in
+one way (or not at all) when the decorator is originally evaluated, but then to
+be wrapped differently once the config has loaded and the desired final
+behavior has been established.
 """
 from metlog.decorators.util import return_fq_name
 
@@ -40,9 +40,8 @@ class MetlogClientWrapper(object):
 
     def activate(self, client, disabled_decorators=None):
         """
-        This method needs to be called to actually enable Metlog decorators
-        set up using `_rebind_dispatcher` and the MetlogDecorator base class
-        defined below.
+        This method needs to be called to actually enable Metlog decorators set
+        up using `MetlogDecorator` base class defined below.
 
         :param client: Fully configured MetlogClient instance.
         :param disabled_decorators: A sequence of strings representing the
@@ -93,6 +92,11 @@ class MetlogDecorator(object):
         return self.__class__.__name__
 
     def predicate(self):
+        """
+        Called during the rebind process. True return value will rebind such
+        that `self.metlog_call` becomes the decorator function, False will
+        rebind such that `self._invoke` becomes the decorator function.
+        """
         if not CLIENT_WRAPPER.is_activated:
             return False
         if CLIENT_WRAPPER.decorator_is_disabled(self.decorator_name):
@@ -103,6 +107,8 @@ class MetlogDecorator(object):
         """
         Sets the function and stores the full dotted notation fn name for later
         use.
+
+        :param fn: Actual function that we are decorating.
         """
         self._fn = fn
         if fn is None:

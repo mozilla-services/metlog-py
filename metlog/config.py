@@ -78,13 +78,17 @@ def client_from_dict_config(config):
 
     The configuration dict supports the following values:
 
-    :logger: Metlog client default logger value.
-    :severity: Metlog client default severity value.
-    :disabled_timers: Sequence of string tokens identifying timers that are to
-                      be deactivated.
-    :sender: Nested dictionary containing sender configuration.
-    :extensions: Nested dictionary specifying dynamic methods to be added to
-                 the instantiated Metlog client.
+    logger
+      Metlog client default logger value.
+    severity
+      Metlog client default severity value.
+    disabled_timers
+      Sequence of string tokens identifying timers that are to be deactivated.
+    sender
+      Nested dictionary containing sender configuration.
+    extensions
+      Nested dictionary specifying dynamic methods to be added to the
+      instantiated Metlog client.
 
     All of the configuration values are optional, but failure to include a
     sender may result in a non-functional Metlog client. Any unrecognized keys
@@ -92,10 +96,13 @@ def client_from_dict_config(config):
 
     The sender configuration supports the following values:
 
-    :class: (required) Dotted name identifying the sender class to instantiate.
-    :args: Sequence of non-keyword args to pass to sender constructor.
-    :<kwargs>: All remaining key-value pairs in the sender config dict will be
-               passed as keyword arguments to the sender constructor.
+    class (required)
+      Dotted name identifying the sender class to instantiate.
+    args
+      Sequence of non-keyword args to pass to sender constructor.
+    <kwargs>
+      All remaining key-value pairs in the sender config dict will be passed as
+      keyword arguments to the sender constructor.
 
     The extensions dictionary keys should be the attribute name to use for each
     dynamic method. The values should be the dotted name resolving to the
@@ -127,7 +134,7 @@ def client_from_stream_config(stream, section):
     """
     Extract configuration data in INI format from a stream object (e.g. a file
     object) and use it to generate a Metlog client. Config values will be sent
-    through the _convert function for possible type conversion.
+    through the `_convert` function for possible type conversion.
 
     :param stream: Stream object containing config information.
     :param section: INI file section containing the configuration we care
