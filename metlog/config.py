@@ -94,6 +94,11 @@ def client_from_dict_config(config):
     sender may result in a non-functional Metlog client. Any unrecognized keys
     will be ignored.
 
+    Note that any top level config values starting with `sender_` will be added
+    to the `sender` config dictionary, overwriting any values that may already
+    be set. Similarly, any top level config values starting with `extensions_`
+    will be inserted into the `extensions` config dictionary.
+
     The sender configuration supports the following values:
 
     class (required)
@@ -108,12 +113,19 @@ def client_from_dict_config(config):
     dynamic method. The values should be the dotted name resolving to the
     function to be used.
     """
+    sender_config = config.get('sender', {})
+    extensions = config.get('extensions', {})
+    for key, value in config.items():
+        if key.startswith('sender_'):
+            sender_config[key[len('sender_'):]] = value
+        elif key.startswith('extensions_'):
+            extensions[key[len('extensions_'):]] = value
+    config['sender'] = sender_config
+    config['extensions'] = extensions
+
     logger = config.get('logger', '')
     severity = config.get('severity', 6)
     disabled_timers = config.get('disabled_timers', [])
-
-    sender_config = config.get('sender', {})
-    extensions = config.get('extensions', {})
 
     resolver = DottedNameResolver()
     sender_clsname = sender_config.pop('class')
@@ -147,22 +159,10 @@ def client_from_stream_config(stream, section):
     """
     config = ConfigParser.SafeConfigParser()
     config.readfp(stream)
-    client = {}
-    sender = {}
-    extensions = {}
+    client_dict = {}
     for opt in config.options(section):
-        value = _convert(config.get(section, opt))
-        if opt.startswith('sender_'):
-            sender[opt[len('sender_'):]] = value
-        elif opt.startswith('extensions_'):
-            extensions[opt[len('extensions_'):]] = value
-        else:
-            client[opt] = value
-    if sender:
-        client['sender'] = sender
-    if extensions:
-        client['extensions'] = extensions
-    return client_from_dict_config(client)
+        client_dict[opt] = _convert(config.get(section, opt))
+    return client_from_dict_config(client_dict)
 
 
 def client_from_text_config(text, section):
