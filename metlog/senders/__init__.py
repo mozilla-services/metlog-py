@@ -14,3 +14,15 @@
 from metlog.senders.zmq import ZmqPubSender  # NOQA
 from metlog.senders.dev import StdOutSender  # NOQA
 from metlog.senders.dev import DebugCaptureSender  # NOQA
+
+
+class NoSendSender(object):
+    """
+    A non-working sender, primarily used as a placeholder between the time a
+    MetlogClient is created and a working sender object is provided.
+    """
+    def send_message(self, msg):
+        """
+        Raises NotImplementedError.
+        """
+        raise NotImplementedError
