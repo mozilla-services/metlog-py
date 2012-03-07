@@ -23,6 +23,8 @@ one way (or not at all) when the decorator is originally evaluated, but then to
 be wrapped differently once the config has loaded and the desired final
 behavior has been established.
 """
+from metlog.client import MetlogClient
+from metlog.config import client_from_dict_config
 from metlog.decorators.util import return_fq_name
 
 
@@ -34,28 +36,24 @@ class MetlogClientWrapper(object):
     is being decorated.
     """
     def __init__(self):
-        self.client = None
+        self.client = MetlogClient()
         # Track any disabled loggers
         self._disabled_decorators = set()
+        self.is_activated = False
 
-    def activate(self, client, disabled_decorators=None):
+    def activate(self, client_config):
         """
-        This method needs to be called to actually enable Metlog decorators set
-        up using `MetlogDecorator` base class defined below.
+        Applies configuration to the wrapped client, allowing it to be used and
+        activating any Metlog decorators that might be in use.
 
-        :param client: Fully configured MetlogClient instance.
-        :param disabled_decorators: A sequence of strings representing the
-                                    names of any Metlog decorator functions
-                                    that should not be enabled.
+        :param client_config: Dictionary containing MetlogClient configuration.
         """
-        self.client = client
-        if disabled_decorators is None:
-            disabled_decorators = []
+        client_from_dict_config(client_config, client=self.client)
+        disabled_decorators = [k.replace("disable_", '')
+                               for (k, v) in client_config.items()
+                               if (k.startswith('disable_') and v)]
         self._disabled_decorators = set(disabled_decorators)
-
-    @property
-    def is_activated(self):
-        return self.client is not None
+        self.is_activated = True
 
     def decorator_is_disabled(self, name):
         # Check if this particular logger is disabled
