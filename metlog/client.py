@@ -21,6 +21,7 @@ import types
 
 from datetime import datetime
 from functools import wraps
+from metlog.senders import NoSendSender
 
 
 class SEVERITY:
@@ -134,17 +135,35 @@ class MetlogClient(object):
     """
     env_version = '0.8'
 
-    def __init__(self, sender, logger='', severity=6, disabled_timers=[]):
+    def __init__(self, sender=None, logger='', severity=6,
+                 disabled_timers=None):
         """
         :param sender: A sender object used for actual message delivery.
         :param logger: Default `logger` value for all sent messages.
         :param severity: Default `severity` value for all sent messages.
+        :param disabled_timers: Sequence of string tokens identifying timers
+                                that should be deactivated.
         """
+        self.setup(sender, logger, severity, disabled_timers)
+
+    def setup(self, sender=None, logger='', severity=6, disabled_timers=None):
+        """
+        :param sender: A sender object used for actual message delivery.
+        :param logger: Default `logger` value for all sent messages.
+        :param severity: Default `severity` value for all sent messages.
+        :param disabled_timers: Sequence of string tokens identifying timers
+                                that should be deactivated.
+        """
+        if sender is None:
+            sender = NoSendSender()
         self.sender = sender
         self.logger = logger
         self.severity = severity
         self._dynamic_methods = {}
-        self._disabled_timers = set(disabled_timers)
+        if disabled_timers is None:
+            self._disabled_timers = set()
+        else:
+            self._disabled_timers = set(disabled_timers)
 
     def send_message(self, msg):
         # Just a handy shortcut so that proxies don't have to talk to
