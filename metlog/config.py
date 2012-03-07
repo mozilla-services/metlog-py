@@ -70,11 +70,13 @@ def _convert(value):
     return do_convert(value)
 
 
-def client_from_dict_config(config):
+def client_from_dict_config(config, client=None):
     """
     Configure a metlog client, fully configured w/ sender and extensions.
 
     :param config: Configuration dictionary.
+    :param client: MetlogClient instance to configure. If None, one will be
+                   created.
 
     The configuration dict supports the following values:
 
@@ -133,7 +135,10 @@ def client_from_dict_config(config):
     sender_args = sender_config.pop('args', tuple())
     sender = sender_cls(*sender_args, **sender_config)
 
-    client = MetlogClient(sender, logger, severity, disabled_timers)
+    if client is None:
+        client = MetlogClient(sender, logger, severity, disabled_timers)
+    else:
+        client.setup(sender, logger, severity, disabled_timers)
 
     for name, func_name in extensions.items():
         func = resolver.resolve(func_name)
@@ -142,7 +147,7 @@ def client_from_dict_config(config):
     return client
 
 
-def client_from_stream_config(stream, section):
+def client_from_stream_config(stream, section, client=None):
     """
     Extract configuration data in INI format from a stream object (e.g. a file
     object) and use it to generate a Metlog client. Config values will be sent
@@ -151,6 +156,8 @@ def client_from_stream_config(stream, section):
     :param stream: Stream object containing config information.
     :param section: INI file section containing the configuration we care
                     about.
+    :param client: MetlogClient instance to configure. If None, one will be
+                   created.
 
     Note that all sender config options should be prefaced by "sender_", e.g.
     "sender_class" should specify the dotted name of the sender class to use.
@@ -162,18 +169,20 @@ def client_from_stream_config(stream, section):
     client_dict = {}
     for opt in config.options(section):
         client_dict[opt] = _convert(config.get(section, opt))
-    return client_from_dict_config(client_dict)
+    return client_from_dict_config(client_dict, client)
 
 
-def client_from_text_config(text, section):
+def client_from_text_config(text, section, client=None):
     """
     Extract configuration data in INI format from provided text and use it to
-    generate a Metlog client. Text is converted to a stream and passed on to
+    configure a Metlog client. Text is converted to a stream and passed on to
     `client_from_stream_config`.
 
     :param text: INI text containing config information.
     :param section: INI file section containing the configuration we care
                     about.
+    :param client: MetlogClient instance to configure. If None, one will be
+                   created.
     """
     stream = StringIO.StringIO(dedent(text))
-    return client_from_stream_config(stream, section)
+    return client_from_stream_config(stream, section, client)
