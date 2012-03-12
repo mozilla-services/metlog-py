@@ -36,10 +36,7 @@ class MetlogClientWrapper(object):
     is being decorated.
     """
     def __init__(self):
-        self.client = MetlogClient()
-        # Track any disabled loggers
-        self._disabled_decorators = set()
-        self.is_activated = False
+        self.reset()
 
     def activate(self, client_config):
         """
@@ -54,6 +51,14 @@ class MetlogClientWrapper(object):
                                if (k.startswith('disable_') and v)]
         self._disabled_decorators = set(disabled_decorators)
         self.is_activated = True
+
+    def reset(self):
+        """
+        Sets client related instance variables to default settings.
+        """
+        self.client = MetlogClient()
+        self._disabled_decorators = set()
+        self.is_activated = False
 
     def decorator_is_disabled(self, name):
         # Check if this particular logger is disabled
