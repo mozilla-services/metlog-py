@@ -27,14 +27,13 @@ except:
 class DecoratorTestBase(object):
     def setUp(self):
         self.orig_client = CLIENT_WRAPPER.client
-        client = client_from_text_config("""
-        [test1]
-        sender_class=metlog.senders.DebugCaptureSender
-        """, 'test1')
-        CLIENT_WRAPPER.activate(client)
+        client_config = {
+            'sender_class': 'metlog.senders.DebugCaptureSender',
+            }
+        CLIENT_WRAPPER.activate(client_config)
 
     def tearDown(self):
-        CLIENT_WRAPPER.activate(self.orig_client)
+        CLIENT_WRAPPER.client = self.orig_client
 
 
 class TestCannedDecorators(DecoratorTestBase):
