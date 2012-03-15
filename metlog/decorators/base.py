@@ -26,6 +26,10 @@ behavior has been established.
 from metlog.client import MetlogClient
 from metlog.config import client_from_dict_config
 from metlog.decorators.util import return_fq_name
+try:
+    import json
+except:
+    import simplejson as json
 
 
 class MetlogClientWrapper(object):
@@ -80,15 +84,15 @@ class MetlogDecorator(object):
     def __init__(self, *args, **kwargs):
         if len(args) == 1 and len(kwargs) == 0 and callable(args[0]):
             # bare decorator, i.e. no arguments
-            self.set_fn(args[0])
             self.args = None
             self.kwargs = None
+            self.set_fn(args[0])
         else:
             # we're instantiated w/ arguments that will need to be passed on to
             # the actual metlog call
-            self.set_fn(None)
             self.args = args[1:]
             self.kwargs = kwargs
+            self.set_fn(None)
 
     @property
     def decorator_name(self):
@@ -120,6 +124,33 @@ class MetlogDecorator(object):
             self._fn_fq_name = fn._fn_fq_name
         else:
             self._fn_fq_name = return_fq_name(fn)
+
+
+        if self._fn != None:
+            self._update_decoratorchain()
+
+    def _update_decoratorchain(self):
+        if not hasattr(self, '_metlog_decorators'):
+            self._metlog_decorators = set()
+
+        if self.kwargs is None:
+            sorted_kw = None
+        else:
+            sorted_kw = json.dumps(self.kwargs)
+
+        if self.args is None:
+            sorted_args = None
+        else:
+            sorted_args = tuple(self.args)
+
+        key = (self.__class__, self.args, sorted_kw)
+
+        self._metlog_decorators.add(key)
+
+        # Add any decorators from the wrapped callable
+        if hasattr(self._fn, '_metlog_decorators'):
+            self._metlog_decorators.update(self._fn._metlog_decorators)
+
 
     def __call__(self, *args, **kwargs):
         """
