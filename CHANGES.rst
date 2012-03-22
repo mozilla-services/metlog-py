@@ -1,6 +1,14 @@
-0.8.2 - ????-??-??
+0.8.2 - 2012-03-22
 ==================
 
+- Added `config`, `decorators`, and `exceptions` to sphinx API docs
+- Support for passing a client in to the `client_from_*` functions
+  to reconfigure an existing client instead of creating a new one
+- Docstring / documentation improvements
+- Added `reset` method to `MetlogClientWrapper`
+- Add support for keeping track of applied decorators to `MetlogDecorator`
+  class
+- Added `NoSendSender` class for use when a client is create w/o a sender
 
 0.8.1 - 2012-03-01
 ==================
