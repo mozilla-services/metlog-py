@@ -136,23 +136,30 @@ class MetlogClient(object):
     env_version = '0.8'
 
     def __init__(self, sender=None, logger='', severity=6,
-                 disabled_timers=None):
+                 disabled_timers=None, filters=None):
         """
         :param sender: A sender object used for actual message delivery.
         :param logger: Default `logger` value for all sent messages.
         :param severity: Default `severity` value for all sent messages.
         :param disabled_timers: Sequence of string tokens identifying timers
                                 that should be deactivated.
+        :param filters: A sequence of 2-tuples, each containing a filter
+                        callable and the config dict to pass in to the callable
+                        on each invocation.
         """
-        self.setup(sender, logger, severity, disabled_timers)
+        self.setup(sender, logger, severity, disabled_timers, filters)
 
-    def setup(self, sender=None, logger='', severity=6, disabled_timers=None):
+    def setup(self, sender=None, logger='', severity=6, disabled_timers=None,
+              filters=None):
         """
         :param sender: A sender object used for actual message delivery.
         :param logger: Default `logger` value for all sent messages.
         :param severity: Default `severity` value for all sent messages.
         :param disabled_timers: Sequence of string tokens identifying timers
                                 that should be deactivated.
+        :param filters: A sequence of 2-tuples, each containing a filter
+                        callable and the config dict to pass in to the callable
+                        on each invocation.
         """
         if sender is None:
             sender = NoSendSender()
@@ -164,10 +171,18 @@ class MetlogClient(object):
             self._disabled_timers = set()
         else:
             self._disabled_timers = set(disabled_timers)
+        if filters is None:
+            filters = list()
+        self.filters = filters
 
     def send_message(self, msg):
-        # Just a handy shortcut so that proxies don't have to talk to
-        # the sender attribute
+        """
+        Apply any filters and, if required, pass message along to the sender
+        for delivery.
+        """
+        for filter_fn, config in self.filters:
+            if not filter_fn(self, config, msg):
+                return
         self.sender.send_message(msg)
 
     def add_method(self, name, method):
@@ -222,7 +237,7 @@ class MetlogClient(object):
         full_msg = dict(type=type, timestamp=timestamp, logger=logger,
                         severity=severity, payload=payload, fields=fields,
                         env_version=self.env_version)
-        self.sender.send_message(full_msg)
+        self.send_message(full_msg)
 
     def timing(self, timer, elapsed):
         """
