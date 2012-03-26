@@ -2,16 +2,15 @@
 Process specific logging tests
 
 We are initially interested in :
-    * network connections with each connection status, 
-    * CPU utilization, 
-    * thread counts, 
-    * child process counts, 
+    * network connections with each connection status,
+    * CPU utilization,
+    * thread counts,
+    * child process counts,
     * memory utilization.
 """
 
 
 from unittest2 import TestCase
-from metlog.procinfo import Memtool
 from metlog.procinfo import process_details
 from metlog.procinfo import check_osx_perm
 from metlog.procinfo import supports_iocounters
@@ -76,7 +75,7 @@ class TestProcessLogs(TestCase):
     def test_io_counters(self):
         if not supports_iocounters():
             self.skipTest("No IO counter support on this platform")
-        # TODO
+        # TODO: need to write a test on Linux. Not sure what data psutils emits
 
     def test_meminfo(self):
         if not check_osx_perm():
@@ -86,22 +85,3 @@ class TestProcessLogs(TestCase):
         for thread_id, thread_data in detail['threads'].items():
             assert 'sys' in thread_data
             assert 'user' in thread_data
-
-class TestMemInfo(TestCase):
-    def test_memdump(self):
-        class TestingMemDummy(object):
-            pass
-        obj = TestingMemDummy()
-        mem = Memtool()
-        json_data = mem.dump_all_objects()
-        eq_(len([l for l in json_data if '"name": "TestingMemDummy"' in l]), 1)
-
-        summary = mem.parse_memory(json_data)
-
-        # Not sure what else I can really assert on here
-        ignored = str(summary)
-        test_summary = [s for s in summary.summaries if s.type_str == 'TestingMemDummy']
-        assert len(test_summary) == 1
-        test_summary = test_summary[0]
-        assert test_summary.count == 1
-        assert test_summary.total_size == 64

@@ -4,9 +4,6 @@ import json
 import os
 import sys
 from subprocess import Popen, PIPE
-from meliae import loader
-from meliae import scanner
-import tempfile
 
 
 class InvalidPIDError(StandardError):
@@ -140,47 +137,8 @@ class LazyPSUtil(object):
         # open files doesn't work in a reliable way
         # data['files'] = self.get_open_files()
 
-        print json.dumps(data)
-
-
-class Memtool(object):
-    """
-    This is a wrapper around meliae - a memory profile dumper
-
-    Meliae seems to segfault python in some conditions - it seems primarily in
-    ipython, so we have to check and throw errors for those conditions
-    """
-    def dump_all_objects(self):
-        """
-        This is very expensive (3 calls per second on a laptop).
-
-        Probably can't fire off a background thread to invoke this either since
-        the scanner is going to hit gc.get_objects() which probably pauses the
-        world.
-        """
-        fout = tempfile.NamedTemporaryFile(suffix='.json', delete=True)
-        fname = fout.name
-        scanner.dump_all_objects(fname)
-        fout.seek(0)
-        data = fout.readlines()
-        fout.close()
-        return data
-
-    def parse_memory(self, data, delete=True):
-        '''
-        Parse the JSON data for memory info.
-
-        This is very expensive.  Do not do this unless you know what you are
-        doing.
-        '''
-        objects = loader.load(data, show_prog=False)
-        objects.compute_parents()
-        summary = objects.summarize()
-
-        # meliae has a bug where you can't iterate over the summaries
-        # until you stringify the object at least once.
-        ignored = str(summary)
-        return summary
+        sys.stdout.write(json.dumps(data))
+        sys.stdout.flush()
 
 
 def process_details(pid=None):
