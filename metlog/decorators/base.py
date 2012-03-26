@@ -125,7 +125,6 @@ class MetlogDecorator(object):
         else:
             self._fn_fq_name = return_fq_name(fn)
 
-
         if self._fn != None:
             self._update_decoratorchain()
 
@@ -150,7 +149,6 @@ class MetlogDecorator(object):
         # Add any decorators from the wrapped callable
         if hasattr(self._fn, '_metlog_decorators'):
             self._metlog_decorators.update(self._fn._metlog_decorators)
-
 
     def __call__(self, *args, **kwargs):
         """
