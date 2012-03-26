@@ -24,11 +24,7 @@ def check_osx_perm():
 
     http://code.google.com/p/psutil/issues/detail?id=108
     """
-    if 'darwin' in sys.platform and os.getuid() == 0:
-        return True
-    elif 'darwin' not in sys.platform:
-        return True
-    return False
+    return 'darwin' not in sys.platform or os.getuid() == 0
 
 
 def supports_iocounters():
@@ -57,7 +53,7 @@ class LazyPSUtil(object):
 
     def get_connections(self):
         connections = []
-        for i, conn in enumerate(self.process.get_connections()):
+        for conn in self.process.get_connections():
             if conn.type == socket.SOCK_STREAM:
                 type = 'TCP'
             elif conn.type == socket.SOCK_DGRAM:
