@@ -1,6 +1,8 @@
 0.8.3 - ????-??-??
 ==================
 
+- Added support for simple message filtering directly in the metlog client.
+
 0.8.2 - 2012-03-22
 ==================
 
