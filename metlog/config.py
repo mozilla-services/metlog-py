@@ -86,6 +86,10 @@ def client_from_dict_config(config, client=None):
       Metlog client default severity value.
     disabled_timers
       Sequence of string tokens identifying timers that are to be deactivated.
+    filters
+      Sequence of 2-tuples `(callable, config)`, where `callable` is dotted
+      notation reference to filter callable and `config` is dictionary config
+      to be passed in during each use of the filter.
     sender
       Nested dictionary containing sender configuration.
     extensions
@@ -128,23 +132,47 @@ def client_from_dict_config(config, client=None):
     logger = config.get('logger', '')
     severity = config.get('severity', 6)
     disabled_timers = config.get('disabled_timers', [])
-
     resolver = DottedNameResolver()
+
+    filters = [(resolver.resolve(filter_dottedname), filter_config) for
+               (filter_dottedname, filter_config) in config.get('filters', [])]
+
     sender_clsname = sender_config.pop('class')
     sender_cls = resolver.resolve(sender_clsname)
     sender_args = sender_config.pop('args', tuple())
     sender = sender_cls(*sender_args, **sender_config)
 
     if client is None:
-        client = MetlogClient(sender, logger, severity, disabled_timers)
+        client = MetlogClient(sender, logger, severity, disabled_timers,
+                              filters)
     else:
-        client.setup(sender, logger, severity, disabled_timers)
+        client.setup(sender, logger, severity, disabled_timers, filters)
 
     for name, func_name in extensions.items():
         func = resolver.resolve(func_name)
         client.add_method(name, func)
 
     return client
+
+
+def _get_filter_config(config, section):
+    """
+    Extract the various filter configuration sections from the config object
+    and return a filters sequence suitable for passing to the client
+    constructor.
+    """
+    # filters config
+    filters_prefix = '%s_filter_' % section
+    filter_sections = [s for s in config.sections()
+                       if s.startswith(filters_prefix)]
+    filters = []
+    for filter_section in filter_sections:
+        filter_config = {}
+        for opt in config.options(filter_section):
+            filter_config[opt] = _convert(config.get(filter_section, opt))
+        filter_dottedname = filter_config.pop('filter')  # 'filter' key req'd
+        filters.append((filter_dottedname, filter_config))
+    return filters
 
 
 def client_from_stream_config(stream, section, client=None):
@@ -169,6 +197,9 @@ def client_from_stream_config(stream, section, client=None):
     client_dict = {}
     for opt in config.options(section):
         client_dict[opt] = _convert(config.get(section, opt))
+    filters = _get_filter_config(config, section)
+    if filters:
+        client_dict['filters'] = filters
     return client_from_dict_config(client_dict, client)
 
 
