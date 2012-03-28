@@ -1,10 +1,16 @@
 # ***** BEGIN LICENSE BLOCK *****
 # This Source Code Form is subject to the terms of the Mozilla Public
-# License, v. 2.0. If a copy of the MPL was not distributed with this
-# file,
+# License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at http://mozilla.org/MPL/2.0/.
+#
+# The Initial Developer of the Original Code is the Mozilla Foundation.
+# Portions created by the Initial Developer are Copyright (C) 2012
+# the Initial Developer. All Rights Reserved.
+#
+# Contributor(s):
+#   Rob Miller (rmiller@mozilla.com)
+#
 # ***** END LICENSE BLOCK *****
-
 from metlog.exceptions import EnvironmentNotFoundError
 from metlog.client import MetlogClient
 from metlog.config import client_from_text_config
@@ -84,3 +90,24 @@ def test_int_bool_conversions():
     MockSender.assert_called_with(integer=123, true1=True, true2=True,
                                   true3=True, true4=True, false1=False,
                                   false2=False, false3=False, false4=False)
+
+
+def test_filters_config():
+    cfg_txt = """
+    [metlog]
+    sender_class = metlog.senders.DebugCaptureSender
+    [metlog_filter_sev_max]
+    filter = metlog.filters.severity_max
+    severity = 6
+    [metlog_filter_type_whitelist]
+    filter = metlog.filters.type_whitelist
+    types = foo
+            bar
+            baz
+    """
+    client = client_from_text_config(cfg_txt, 'metlog')
+    from metlog.filters import severity_max, type_whitelist
+    expected = [(severity_max, {'severity': 6}),
+                (type_whitelist, {'types': ['foo', 'bar', 'baz']}),
+                ]
+    eq_(client.filters, expected)

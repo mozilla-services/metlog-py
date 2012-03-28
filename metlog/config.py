@@ -161,6 +161,7 @@ def _get_filter_config(config, section):
     and return a filters sequence suitable for passing to the client
     constructor.
     """
+<<<<<<< HEAD
     return _get_plugin_config(config, section, 'filter')
 
 def _get_plugin_config(config, section, plugin):
@@ -182,6 +183,20 @@ def _get_plugin_config(config, section, plugin):
         plugins.append((plugin_dottedname, plugin_config))
     return plugins
 
+=======
+    # filters config
+    filters_prefix = '%s_filter_' % section
+    filter_sections = [s for s in config.sections()
+                       if s.startswith(filters_prefix)]
+    filters = []
+    for filter_section in filter_sections:
+        filter_config = {}
+        for opt in config.options(filter_section):
+            filter_config[opt] = _convert(config.get(filter_section, opt))
+        filter_dottedname = filter_config.pop('filter')  # 'filter' key req'd
+        filters.append((filter_dottedname, filter_config))
+    return filters
+>>>>>>> master
 
 
 def client_from_stream_config(stream, section, client=None):
