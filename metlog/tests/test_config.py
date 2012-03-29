@@ -117,6 +117,7 @@ def test_plugins_config():
     [metlog]
     sender_class = metlog.senders.DebugCaptureSender
     [metlog_plugin_dummy]
+    verbose=True
     foo=bar
     some_list = dog
                 cat
@@ -125,7 +126,7 @@ def test_plugins_config():
     host=lolcathost
     """
     client = client_from_text_config(cfg_txt, 'metlog')
-    actual = client.dummy()
+    actual = client.dummy(verbose=True)
     expected = {'host': 'lolcathost', 
      'foo': 'bar', 'some_list': ['dog', 'cat', 'bus'],
      'port': 8080}

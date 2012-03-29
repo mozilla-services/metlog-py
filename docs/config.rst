@@ -108,6 +108,7 @@ severity of 4 (i.e. "warning") or lower will actually be passed in to the
 sender. Additionally a "type whitelist" will be applied, so that only messages
 of type "timer" and "oldstyle" will be delivered.
 
+
 dictionary format
 =================
 
@@ -134,3 +135,46 @@ be converted to the following dictionary::
                 ),
                ],
    }
+
+plugins
+=======
+
+Metlog allows you to bind new extensions onto the client through a
+plugin mechanism.
+
+Each plugin must have a configuration section name with a prefix of 
+`metlog_plugin_`.  Configuration is parsed into a dictionary, passed
+into a configurator and then the resulting plugin method is bound 
+to the client.
+
+Each plugin extension method is bound in with the name that follows
+the `metlog_plugin_` prefix in the configuration section.
+
+Plugins are declared using the standard `entry_points` mechanism in
+setup.py.  Metlog itself has a dummy plugin in the core as an example.
+The `entry_point` declaration appears like this ::
+
+      entry_points= {
+          'metlog.plugin': ['dummy=metlog.tests.plugin:config_plugin'],
+          },
+
+This declares a plugin configurator function named `config_plugin` in
+`metlog.tests.plugin`. The configurator is passed the configuration
+dictionary described above and returns a configured method that will
+be bound into the client.
+
+An example best demonstrates what can be expected.  To load the dummy
+plugin, you need a `metlog_plugin_dummy` section as well as some
+configuration parameters. Here's an example ::
+
+    [metlog_plugin_dummy]
+    port=8080
+    host=localhost
+
+Once you obtain a reference to a client, you can access the new
+method. ::
+
+    from metlog.decorators.base import CLIENT_WRAPPER
+    client = CLIENT_WRAPPER.client
+    client.dummy('some', 'ignored', 'arguments', 42)
+

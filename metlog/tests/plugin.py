@@ -18,10 +18,16 @@ def config_plugin(config_dict):
     # Normally, the config_dict is unwrapped to get
     # some variables that can be used in the closure
     # to disable features
+    default_verbose = config_dict.pop('verbose', False)
+
     def my_plugin(self, *args, **kwargs):
         # Most real plugin methods will use the variables captured in the
         # config_dict to override arguments passed in by the developer through
         # *args and **kwargs.  This allows operations to disable specific
         # features of metlog without having to deploy new code.
+
+        if not (default_verbose and kwargs.get('verbose', False)):
+            # Just skip early
+            return
         return config_dict
     return my_plugin
