@@ -111,3 +111,22 @@ def test_filters_config():
                 (type_whitelist, {'types': ['foo', 'bar', 'baz']}),
                 ]
     eq_(client.filters, expected)
+
+def test_plugins_config():
+    cfg_txt = """
+    [metlog]
+    sender_class = metlog.senders.DebugCaptureSender
+    [metlog_plugin_dummy]
+    foo=bar
+    some_list = dog
+                cat
+                bus
+    port=8080
+    host=lolcathost
+    """
+    client = client_from_text_config(cfg_txt, 'metlog')
+    actual = client.dummy()
+    expected = {'host': 'lolcathost', 
+     'foo': 'bar', 'some_list': ['dog', 'cat', 'bus'],
+     'port': 8080}
+    assert actual == expected

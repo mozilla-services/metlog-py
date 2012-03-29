@@ -48,7 +48,7 @@ setup(name='metlog-py',
           'mock',
           'pyzmq',
           ],
-      entry_points="""
-      # -*- Entry points: -*-
-      """,
+      entry_points= {
+          'metlog.plugin': ['dummy=metlog.tests.plugin:config_plugin'],
+          },
       )

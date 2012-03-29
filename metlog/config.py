@@ -22,6 +22,7 @@ import ConfigParser
 import StringIO
 import os
 import re
+import pkg_resources
 
 _IS_INTEGER = re.compile('^-?[0-9].*')
 _IS_ENV_VAR = re.compile('\$\{(\w.*)?\}')
@@ -70,13 +71,15 @@ def _convert(value):
     return do_convert(value)
 
 
-def client_from_dict_config(config, client=None):
+def client_from_dict_config(config, client=None, plugin_param=None):
     """
-    Configure a metlog client, fully configured w/ sender and extensions.
+    Configure a metlog client, fully configured w/ sender and plugins.
 
     :param config: Configuration dictionary.
     :param client: MetlogClient instance to configure. If None, one will be
                    created.
+    :param plugin_param: Configuration dictionary for methods that will be bound
+                         into the MetlogClient instance
 
     The configuration dict supports the following values:
 
@@ -92,9 +95,6 @@ def client_from_dict_config(config, client=None):
       to be passed in during each use of the filter.
     sender
       Nested dictionary containing sender configuration.
-    extensions
-      Nested dictionary specifying dynamic methods to be added to the
-      instantiated Metlog client.
 
     All of the configuration values are optional, but failure to include a
     sender may result in a non-functional Metlog client. Any unrecognized keys
@@ -102,8 +102,7 @@ def client_from_dict_config(config, client=None):
 
     Note that any top level config values starting with `sender_` will be added
     to the `sender` config dictionary, overwriting any values that may already
-    be set. Similarly, any top level config values starting with `extensions_`
-    will be inserted into the `extensions` config dictionary.
+    be set. 
 
     The sender configuration supports the following values:
 
@@ -114,20 +113,12 @@ def client_from_dict_config(config, client=None):
     <kwargs>
       All remaining key-value pairs in the sender config dict will be passed as
       keyword arguments to the sender constructor.
-
-    The extensions dictionary keys should be the attribute name to use for each
-    dynamic method. The values should be the dotted name resolving to the
-    function to be used.
     """
     sender_config = config.get('sender', {})
-    extensions = config.get('extensions', {})
     for key, value in config.items():
         if key.startswith('sender_'):
             sender_config[key[len('sender_'):]] = value
-        elif key.startswith('extensions_'):
-            extensions[key[len('extensions_'):]] = value
     config['sender'] = sender_config
-    config['extensions'] = extensions
 
     logger = config.get('logger', '')
     severity = config.get('severity', 6)
@@ -148,9 +139,16 @@ def client_from_dict_config(config, client=None):
     else:
         client.setup(sender, logger, severity, disabled_timers, filters)
 
-    for name, func_name in extensions.items():
-        func = resolver.resolve(func_name)
-        client.add_method(name, func)
+    # Load plugins and pass in config
+    if plugin_param is not None:
+        for entry in pkg_resources.iter_entry_points(group='metlog.plugin'):
+            plugin_name = entry.name
+            if plugin_name not in plugin_param:
+                # This plugin has no configuration - don't load it
+                continue
+            config = entry.load()
+            plugin = config(plugin_param[plugin_name])
+            client.add_method(plugin_name, plugin)
 
     return client
 
@@ -161,7 +159,6 @@ def _get_filter_config(config, section):
     and return a filters sequence suitable for passing to the client
     constructor.
     """
-<<<<<<< HEAD
     return _get_plugin_config(config, section, 'filter')
 
 def _get_plugin_config(config, section, plugin):
@@ -182,22 +179,6 @@ def _get_plugin_config(config, section, plugin):
         plugin_dottedname = plugin_config.pop(plugin)  # 'plugin' key req'd
         plugins.append((plugin_dottedname, plugin_config))
     return plugins
-
-=======
-    # filters config
-    filters_prefix = '%s_filter_' % section
-    filter_sections = [s for s in config.sections()
-                       if s.startswith(filters_prefix)]
-    filters = []
-    for filter_section in filter_sections:
-        filter_config = {}
-        for opt in config.options(filter_section):
-            filter_config[opt] = _convert(config.get(filter_section, opt))
-        filter_dottedname = filter_config.pop('filter')  # 'filter' key req'd
-        filters.append((filter_dottedname, filter_config))
-    return filters
->>>>>>> master
-
 
 def client_from_stream_config(stream, section, client=None):
     """
@@ -221,10 +202,25 @@ def client_from_stream_config(stream, section, client=None):
     client_dict = {}
     for opt in config.options(section):
         client_dict[opt] = _convert(config.get(section, opt))
+
     filters = _get_filter_config(config, section)
+
     if filters:
         client_dict['filters'] = filters
-    return client_from_dict_config(client_dict, client)
+
+    # Load any plugin configuration
+    plugin_sections = [n for n in config.sections() if n.startswith("%s_plugin" % section)]
+    plugin_param = {}
+    for plugin_section in plugin_sections:
+        plugin_name = plugin_section.replace("%s_plugin_" % section, '')
+        plugin_dict = {}
+        for opt in config.options(plugin_section):
+            plugin_dict[opt] = _convert(config.get(plugin_section, opt))
+        plugin_param[plugin_name] = plugin_dict
+
+    client = client_from_dict_config(client_dict, client, plugin_param)
+
+    return client
 
 
 def client_from_text_config(text, section, client=None):
