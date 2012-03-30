@@ -217,6 +217,7 @@ def client_from_stream_config(stream, section, client=None):
             if opt == 'provider':
                 configurator = resolver.resolve(config.get(plugin_section, opt))
                 plugin_dict['plugin.provider'] = configurator
+                continue
             plugin_dict[opt] = _convert(config.get(plugin_section, opt))
         plugin_param[plugin_name] = plugin_dict
 

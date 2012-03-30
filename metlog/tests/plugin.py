@@ -22,7 +22,6 @@ def config_plugin(config_dict):
 
     import copy
     mycopy = copy.deepcopy(config_dict)
-    del mycopy['provider']
 
     def my_plugin(self, *args, **kwargs):
         # Most real plugin methods will use the variables captured in the
