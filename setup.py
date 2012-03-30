@@ -49,6 +49,5 @@ setup(name='metlog-py',
           'pyzmq',
           ],
       entry_points= {
-          'metlog.plugin': ['dummy=metlog.tests.plugin:config_plugin'],
           },
       )

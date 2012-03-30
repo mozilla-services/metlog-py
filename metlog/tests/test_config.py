@@ -117,6 +117,7 @@ def test_plugins_config():
     [metlog]
     sender_class = metlog.senders.DebugCaptureSender
     [metlog_plugin_dummy]
+    provider=metlog.tests.plugin:config_plugin
     verbose=True
     foo=bar
     some_list = dog

@@ -140,13 +140,9 @@ def client_from_dict_config(config, client=None, plugin_param=None):
         client.setup(sender, logger, severity, disabled_timers, filters)
 
     # Load plugins and pass in config
-    if plugin_param is not None:
-        for entry in pkg_resources.iter_entry_points(group='metlog.plugin'):
-            plugin_name = entry.name
-            if plugin_name not in plugin_param:
-                # This plugin has no configuration - don't load it
-                continue
-            config = entry.load()
+    if plugin_param != None:
+        for plugin_name, plugin_config in plugin_param.items():
+            config = plugin_config.pop('plugin.provider')
             plugin = config(plugin_param[plugin_name])
             client.add_method(plugin_name, plugin)
 
@@ -211,10 +207,16 @@ def client_from_stream_config(stream, section, client=None):
     # Load any plugin configuration
     plugin_sections = [n for n in config.sections() if n.startswith("%s_plugin" % section)]
     plugin_param = {}
+
+    resolver = DottedNameResolver()
+
     for plugin_section in plugin_sections:
         plugin_name = plugin_section.replace("%s_plugin_" % section, '')
         plugin_dict = {}
         for opt in config.options(plugin_section):
+            if opt == 'provider':
+                configurator = resolver.resolve(config.get(plugin_section, opt))
+                plugin_dict['plugin.provider'] = configurator
             plugin_dict[opt] = _convert(config.get(plugin_section, opt))
         plugin_param[plugin_name] = plugin_dict
 

@@ -20,6 +20,10 @@ def config_plugin(config_dict):
     # to disable features
     default_verbose = config_dict.pop('verbose', False)
 
+    import copy
+    mycopy = copy.deepcopy(config_dict)
+    del mycopy['provider']
+
     def my_plugin(self, *args, **kwargs):
         # Most real plugin methods will use the variables captured in the
         # config_dict to override arguments passed in by the developer through
@@ -27,7 +31,7 @@ def config_plugin(config_dict):
         # features of metlog without having to deploy new code.
 
         if not (default_verbose and kwargs.get('verbose', False)):
-            # Just skip early
+            # Just skip early if any verbose flag has been set to False
             return
-        return config_dict
+        return mycopy
     return my_plugin
