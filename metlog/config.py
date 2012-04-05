@@ -22,7 +22,6 @@ import ConfigParser
 import StringIO
 import os
 import re
-import pkg_resources
 
 _IS_INTEGER = re.compile('^-?[0-9].*')
 _IS_ENV_VAR = re.compile('\$\{(\w.*)?\}')
