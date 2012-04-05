@@ -1,7 +1,9 @@
 0.8.3 - ????-??-??
 ==================
 
-- Added support for simple message filtering directly in the metlog client.
+- Added support for simple message filtering directly in the metlog client
+- "Metlog Configuration" documentation
+- Added support for setting up client extension methods from configuration
 
 0.8.2 - 2012-03-22
 ==================
