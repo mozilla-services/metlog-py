@@ -48,6 +48,6 @@ setup(name='metlog-py',
           'mock',
           'pyzmq',
           ],
-      entry_points= {
+      entry_points={
           },
       )
