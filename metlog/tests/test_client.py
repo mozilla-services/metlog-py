@@ -19,6 +19,7 @@ from metlog.senders.dev import DebugCaptureSender
 
 import threading
 import time
+import logging
 
 try:
     import simplejson as json
@@ -246,4 +247,24 @@ class TestDisabledTimer(object):
         foo()
 
         assert len(self.mock_sender.msgs) == 0
+
+class TestLoggingHook(object):
+    logger = 'tests'
+
+    def setUp(self):
+        self.mock_sender = Mock()
+        self.client = MetlogClient(self.mock_sender, self.logger)
+        # overwrite the class-wide threadlocal w/ an instance one
+        # so values won't persist btn tests
+        self.client.timer._local = threading.local()
+
+    def tearDown(self):
+        del self.mock_sender
+
+    def test_logging_handler(self):
+        logger = logging.getLogger('demo')
+        self.client.hook_logger('demo')
+        msg = "this is an info message"
+        logger.info(msg)
+        assert msg == self.mock_sender.send_message.call_args[0][0]['payload']
 
