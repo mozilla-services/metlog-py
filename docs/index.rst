@@ -3,6 +3,16 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
+Contents
+========
+
+.. toctree::
+   :maxdepth: 1
+
+   config
+   api/client
+   api/senders
+
 .. include:: ../README.rst
 
 There are two primary components to the metlog-py library, the :doc:`api/client`

@@ -38,7 +38,7 @@ class SEVERITY:
     DEBUG = 7
 
 
-class TimerResult(object):
+class _TimerResult(object):
     def __init__(self, ms=None):
         self.ms = ms
 
@@ -113,7 +113,7 @@ class _Timer(object):
             return None
 
         self.start = time.time()
-        self.result = TimerResult()
+        self.result = _TimerResult()
         return self.result
 
     def __exit__(self, typ, value, tb):
