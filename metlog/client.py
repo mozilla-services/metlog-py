@@ -277,22 +277,28 @@ class MetlogClient(object):
 
     # Standard Python logging API emulation
     def debug(self, msg):
+        """ Log a DEBUG level message """
         self.metlog(type='oldstyle', severity=SEVERITY.DEBUG, payload=msg)
 
     def info(self, msg):
+        """ Log a INFO level message """
         self.metlog(type='oldstyle', severity=SEVERITY.INFORMATIONAL,
                     payload=msg)
 
     def warn(self, msg):
+        """ Log a WARN level message """
         self.metlog(type='oldstyle', severity=SEVERITY.WARNING, payload=msg)
 
     def error(self, msg):
+        """ Log a ERROR level message """
         self.metlog(type='oldstyle', severity=SEVERITY.ERROR, payload=msg)
 
     def exception(self, msg):
+        """ Log a ALERT level message """
         self.metlog(type='oldstyle', severity=SEVERITY.ALERT, payload=msg)
 
     def critical(self, msg):
+        """ Log a CRITICAL level message """
         self.metlog(type='oldstyle', severity=SEVERITY.CRITICAL, payload=msg)
 
     def _get_handler(self):
