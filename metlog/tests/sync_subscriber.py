@@ -9,12 +9,12 @@ def main():
 
     # First, connect our subscriber socket
     subscriber = context.socket(zmq.SUB)
-    subscriber.connect('tcp://localhost:5561')
+    subscriber.bind('tcp://*:5561')
     subscriber.setsockopt(zmq.SUBSCRIBE, "")
 
     # Second, synchronize with publisher
     syncclient = context.socket(zmq.REP)
-    syncclient.connect('tcp://localhost:5562')
+    syncclient.bind('tcp://*:5562')
 
     # wait for a synchronization request
     syncclient.recv()
