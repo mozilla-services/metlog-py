@@ -2,6 +2,7 @@
 # Synchronized publisher. This is like a metlog cliennt
 #
 import zmq
+import sys
 
 def main():
     context = zmq.Context()
@@ -16,12 +17,22 @@ def main():
 
     # send synchronization request
     print "Sending Sync Request"
-    syncservice.send('')
-    print "Sync Request sent!"
 
-    # wait for synchronization reply
+    poll = zmq.Poller()
+    poll.register(syncservice, zmq.POLLOUT)
+    print "Polling before sending sync request"
+    events = poll.poll(100)
+    if len(events) == 0:
+        print "No server is visible"
+        sys.exit(0)
+
+    poll.unregister(syncservice)
+
+    print "Poll results: %s" % str(events)
+
+    syncservice.send("")
     syncservice.recv()
-    print "+1 subscriber"
+
 
     # Now broadcast exactly 1M updates followed by END
     for i in range(1000000):
