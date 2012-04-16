@@ -5,6 +5,8 @@ import zmq
 import Queue
 import sys
 from contextlib import contextmanager
+import threading
+import time
 
 class Client(object):
     def __init__(self, context, handshake_bind, connect_bind):
@@ -64,8 +66,10 @@ class Client(object):
         except ZeroMQError, err:
             pass
 
-def client_factory():
-    return Client(context, 'tcp://localhost:5562', 'tcp://localhost:5561')
+def client_factory(context):
+    def get_client():
+        return Client(context, 'tcp://localhost:5562', 'tcp://localhost:5561')
+    return get_client
 
 class Pool(object):
     """
@@ -81,9 +85,9 @@ class Pool(object):
         for i in range(size):
             self._clients.put(client_factory())
 
-    def send(self, *args, **kwargs):
+    def send(self, msg):
         with self.return_to_pool(self.socket()) as socket:
-            socket.send(*args, **kwargs)
+            socket.send(msg)
 
     @contextmanager
     def return_to_pool(self, sock):
@@ -97,10 +101,19 @@ class Pool(object):
 def main():
     context = zmq.Context()
 
-    client = Client(context, 'tcp://localhost:5562', 'tcp://localhost:5561')
-    for i in range(1000000):
-        client.send('Rhubarb');
-    client.send('END')
+    pool = Pool(client_factory(context))
+
+    def threaded_send():
+        for i in range(100000):
+            pool.send('Rhubarb');
+
+    for i in range(10):
+        t = threading.Thread(target=threaded_send)
+        t.daemon = True
+        t.start()
+
+    time.sleep(5)
+    pool.send('END')
 
 if __name__ == '__main__':
     main()
