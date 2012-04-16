@@ -178,8 +178,8 @@ class ZmqPubSender(object):
 
         def get_client():
             return SimpleClient(self._zmq_context,
-                                     connect_bind,
-                                     queue_length)
+                                connect_bind,
+                                queue_length)
 
         self.pool = Pool(get_client, pool_size)
 
