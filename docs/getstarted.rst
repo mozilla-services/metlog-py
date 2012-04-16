@@ -5,10 +5,10 @@ There are two primary components with which users of the metlog-py library
 should be aware. The first is the :doc:`api/client` client class. The
 MetlogClient exposes the main Metlog API, and is generally your main point of
 interaction with the Metlog system. The client doesn't do very much, however;
-it merely pulls together the relevant parts of the message constructs a
-properly structured dictionary representing the message. Actual message
-delivery is handled by a :doc:`sender <api/senders>`. Without a properly
-configured sender, a MetlogClient is useless.
+it just constructs a properly structured dictionary representing the message
+and passes it on. Actual message delivery is handled by a :doc:`sender
+<api/senders>`. Without a properly configured sender, a MetlogClient is
+useless.
 
 The first question you're likely to face when using metlog-py, then, is likely
 to be "How the heck do I get my hands on a properly configured MetlogClient
