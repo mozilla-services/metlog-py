@@ -54,7 +54,7 @@ class HandshakingClient(object):
         self.handshake_socket.connect(self.handshake_bind)
         self.handshake_socket.setsockopt(zmq.LINGER, 0)
 
-        # Socket to actually doi pub/sub
+        # Socket to actually do pub/sub
         self.socket = self.context.socket(zmq.PUB)
         self.socket.connect(self.connect_bind)
         self.socket.setsockopt(zmq.LINGER, 0)
