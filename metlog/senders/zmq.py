@@ -78,9 +78,7 @@ class HandshakingClient(object):
 
     def send(self, msg):
         try:
-            if self._connected:
-                self.socket.send(msg)
-            elif self.connect():
+            if self._connected or self.connect():
                 self.socket.send(msg)
             else:
                 sys.stderr.write(msg)
