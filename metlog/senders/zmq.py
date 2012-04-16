@@ -30,6 +30,33 @@ import sys
 MAX_MESSAGES = 1000
 
 
+class SimpleClient(object):
+    def __init__(self, context, connect_bind, hwm=200):
+        self.context = context
+
+        self.connect_bind = connect_bind
+        self.hwm = hwm
+        self.socket = None
+
+        self.connect()
+
+    def connect(self):
+        # Socket to actually doi pub/sub
+        self.socket = self.context.socket(zmq.PUB)
+        self.socket.connect(self.connect_bind)
+        self.socket.setsockopt(zmq.LINGER, 0)
+        self.socket.setsockopt(zmq.HWM, self.hwm)
+
+    def send(self, msg):
+        self.socket.send(msg)
+
+    def close(self):
+        try:
+            self.socket.close()
+        except zmq.ZMQError:
+            pass
+
+
 class HandshakingClient(object):
     def __init__(self, context, handshake_bind, connect_bind,
                  handshake_timeout=200,
@@ -145,17 +172,13 @@ class ZmqPubSender(object):
             raise ValueError('Must have `pyzmq` installed to use ZmqPubSender')
         return super(ZmqPubSender, cls).__new__(cls)
 
-    def __init__(self, handshake_bind,
-                 connect_bind,
-                 handshake_timeout,
+    def __init__(self, connect_bind,
                  pool_size=10,
                  queue_length=MAX_MESSAGES):
 
         def get_client():
-            return HandshakingClient(self._zmq_context,
-                                     handshake_bind,
+            return SimpleClient(self._zmq_context,
                                      connect_bind,
-                                     handshake_timeout,
                                      queue_length)
 
         self.pool = Pool(get_client, pool_size)
