@@ -77,8 +77,8 @@ def client_from_dict_config(config, client=None, plugin_param=None):
     :param config: Configuration dictionary.
     :param client: MetlogClient instance to configure. If None, one will be
                    created.
-    :param plugin_param: Configuration dictionary for methods that will be bound
-                         into the MetlogClient instance
+    :param plugin_param: Configuration dictionary for methods that will be
+                         bound into the MetlogClient instance
 
     The configuration dict supports the following values:
 
@@ -101,7 +101,7 @@ def client_from_dict_config(config, client=None, plugin_param=None):
 
     Note that any top level config values starting with `sender_` will be added
     to the `sender` config dictionary, overwriting any values that may already
-    be set. 
+    be set.
 
     The sender configuration supports the following values:
 
@@ -156,6 +156,7 @@ def _get_filter_config(config, section):
     """
     return _get_plugin_config(config, section, 'filter')
 
+
 def _get_plugin_config(config, section, plugin):
     """
     Extract the various plugin configuration sections from the config object
@@ -174,6 +175,7 @@ def _get_plugin_config(config, section, plugin):
         plugin_dottedname = plugin_config.pop(plugin)  # 'plugin' key req'd
         plugins.append((plugin_dottedname, plugin_config))
     return plugins
+
 
 def client_from_stream_config(stream, section, client=None):
     """
@@ -204,7 +206,8 @@ def client_from_stream_config(stream, section, client=None):
         client_dict['filters'] = filters
 
     # Load any plugin configuration
-    plugin_sections = [n for n in config.sections() if n.startswith("%s_plugin" % section)]
+    plugin_sections = [n for n in config.sections()
+                       if n.startswith("%s_plugin" % section)]
     plugin_param = {}
 
     resolver = DottedNameResolver()
@@ -214,7 +217,8 @@ def client_from_stream_config(stream, section, client=None):
         plugin_dict = {}
         for opt in config.options(plugin_section):
             if opt == 'provider':
-                configurator = resolver.resolve(config.get(plugin_section, opt))
+                configurator = resolver.resolve(config.get(plugin_section,
+                                                           opt))
                 plugin_dict['plugin.provider'] = configurator
                 continue
             plugin_dict[opt] = _convert(config.get(plugin_section, opt))

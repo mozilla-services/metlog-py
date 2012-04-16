@@ -15,6 +15,16 @@ utility functions that will parse config files and set up a configured client
 instance for you. Folks new to using Metlog will probably find :doc:`config` a
 good place to get started.
 
+Contents
+========
+
+.. toctree::
+   :maxdepth: 1
+
+   getstarted
+   config
+   api/client
+   api/senders
 
 Indices and tables
 ==================
