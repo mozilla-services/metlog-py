@@ -16,7 +16,6 @@ try:
     import simplesjson as json
 except ImportError:
     import json  # NOQA
-import threading
 try:
     import zmq
 except ImportError:
@@ -33,8 +32,8 @@ MAX_MESSAGES = 1000
 
 class HandshakingClient(object):
     def __init__(self, context, handshake_bind, connect_bind,
-            handshake_timeout=200, 
-            hwm=200):
+                 handshake_timeout=200,
+                 hwm=200):
 
         self.context = context
 
@@ -94,7 +93,7 @@ class HandshakingClient(object):
     def close(self):
         try:
             self.handshake_socket.close()
-        except ZQError, err:
+        except ZMQError, err:
             pass
 
         try:
@@ -102,10 +101,12 @@ class HandshakingClient(object):
         except ZMQError, err:
             pass
 
+
 def client_factory(context):
     def get_client():
         return Client(context, 'tcp://localhost:5562', 'tcp://localhost:5561')
     return get_client
+
 
 class Pool(object):
     """
@@ -138,6 +139,7 @@ class Pool(object):
     def socket(self):
         return self._clients.get()
 
+
 class ZmqPubSender(object):
     """
     Sends metlog messages out via a ZeroMQ publisher socket.
@@ -151,18 +153,18 @@ class ZmqPubSender(object):
             raise ValueError('Must have `pyzmq` installed to use ZmqPubSender')
         return super(ZmqPubSender, cls).__new__(cls)
 
-    def __init__(self, handshake_bind, 
-                    connect_bind,
-                    handshake_timeout,
-                    pool_size=10,
-                    queue_length=MAX_MESSAGES):
+    def __init__(self, handshake_bind,
+                 connect_bind,
+                 handshake_timeout,
+                 pool_size=10,
+                 queue_length=MAX_MESSAGES):
 
         def get_client():
-            return HandshakingClient(_zmq_context, 
-                    handshake_bind, 
-                    connect_bind, 
-                    handshake_timeout,
-                    queue_length)
+            return HandshakingClient(_zmq_context,
+                                     handshake_bind,
+                                     connect_bind,
+                                     handshake_timeout,
+                                     queue_length)
 
         self.pool = Pool(get_client, pool_size)
 
