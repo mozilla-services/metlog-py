@@ -9,10 +9,15 @@ import threading
 import time
 
 class Client(object):
-    def __init__(self, context, handshake_bind, connect_bind):
+    def __init__(self, context, handshake_bind, connect_bind,
+            handshake_timeout=200):
+
         self.context = context
+
         self.handshake_bind = handshake_bind
         self.connect_bind = connect_bind
+
+        self.handshake_timeout = handshake_timeout
 
         self.handshake_socket = None
         self.socket = None
@@ -34,7 +39,7 @@ class Client(object):
         poll.register(self.handshake_socket, zmq.POLLIN)
 
         self.handshake_socket.send("")
-        socks = dict(poll.poll(200))
+        socks = dict(poll.poll(self.handshake_timeout))
 
         if socks.get(self.handshake_socket) == zmq.POLLIN:
             self.handshake_socket.recv()
@@ -73,11 +78,13 @@ def client_factory(context):
 
 class Pool(object):
     """
-    This manages a pool of 0mq clients.
+    This is a threadsafe poool of 0mq clients.
 
-    We need 2 bindstrings - one for req/resp to do the initial
-    handshaking to make sure that messages are passing through the 0mq
-    connection withiout dropping packets.
+    :param client_factory:
+        a factory function which takes no arguments and will generate
+        client instances. Clients are responsible to rebind themselves
+        if necessary
+    :param size: The number of clients to create in the pool
     """
 
     def __init__(self, client_factory, size=10):
@@ -86,17 +93,19 @@ class Pool(object):
             self._clients.put(client_factory())
 
     def send(self, msg):
-        with self.return_to_pool(self.socket()) as socket:
-            socket.send(msg)
-
-    @contextmanager
-    def return_to_pool(self, sock):
-        yield sock
-        self._clients.put(sock)
+        sock = None
+        try:
+            sock = self.socket()
+            sock.send(msg)
+        except Queue.Empty:
+            # Sometimes, we'll get nothing
+            sys.stderr.write(msg)
+        finally:
+            if sock:
+                self._clients.put(sock)
 
     def socket(self):
-        return self._clients.get(block=True)
-
+        return self._clients.get()
 
 def main():
     context = zmq.Context()
@@ -104,7 +113,7 @@ def main():
     pool = Pool(client_factory(context))
 
     def threaded_send():
-        for i in range(100000):
+        for i in range(10000):
             pool.send('Rhubarb');
 
     for i in range(10):
@@ -112,7 +121,7 @@ def main():
         t.daemon = True
         t.start()
 
-    time.sleep(5)
+    time.sleep(10)
     pool.send('END')
 
 if __name__ == '__main__':
