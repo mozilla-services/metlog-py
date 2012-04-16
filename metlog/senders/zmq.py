@@ -93,19 +93,13 @@ class HandshakingClient(object):
     def close(self):
         try:
             self.handshake_socket.close()
-        except ZMQError, err:
+        except zmq.ZMQError:
             pass
 
         try:
             self.socket.close()
-        except ZMQError, err:
+        except zmq.ZMQError:
             pass
-
-
-def client_factory(context):
-    def get_client():
-        return Client(context, 'tcp://localhost:5562', 'tcp://localhost:5561')
-    return get_client
 
 
 class Pool(object):
@@ -160,7 +154,7 @@ class ZmqPubSender(object):
                  queue_length=MAX_MESSAGES):
 
         def get_client():
-            return HandshakingClient(_zmq_context,
+            return HandshakingClient(self._zmq_context,
                                      handshake_bind,
                                      connect_bind,
                                      handshake_timeout,
