@@ -5,20 +5,20 @@ There are two primary components with which users of the metlog-py library
 should be aware. The first is the :doc:`api/client` client class. The
 MetlogClient exposes the main Metlog API, and is generally your main point of
 interaction with the Metlog system. The client doesn't do very much, however;
-it just constructs a properly structured dictionary representing the message
-and passes it on. Actual message delivery is handled by a :doc:`sender
-<api/senders>`. Without a properly configured sender, a MetlogClient is
-useless.
+it just provides convenience methods for constructing messages of various types
+and then passes the messages along. Actual message delivery is handled by a
+:doc:`sender <api/senders>`. Without a properly configured sender, a
+MetlogClient is useless.
 
-The first question you're likely to face when using metlog-py, then, is likely
-to be "How the heck do I get my hands on a properly configured MetlogClient
-object, with a properly configured sender?" You could read the source and
-instantiate and configure these objects yourself, but for your convenience
-we've provided a :doc:`config` module that simplifies this process
-considerably. The config module provides utility functions that allow you pass
-in a declarative representation of the settings you'd like for your client and
-sender objects, and it will create and configure them for you based on the
-provided specifications. Some examples of how this might work are below.
+The first question you're likely to ask when using metlog-py, then, will
+probably be "How the heck do I get my hands on a properly configured client /
+sender pair?" You could read the source and instantiate and configure these
+objects yourself, but for your convenience we've provided a :doc:`config`
+module that simplifies this process considerably. The config module provides
+utility functions that allow you pass in a declarative representation of the
+settings you'd like for your client and sender objects, and it will create and
+configure them for you based on the provided specifications. Some examples of
+how this might work are below.
 
 Example 1: Testing
 ------------------
