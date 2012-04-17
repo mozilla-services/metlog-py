@@ -175,7 +175,8 @@ class ZmqPubSender(object):
 
     def __init__(self, bindstrs,
                  pool_size=10,
-                 queue_length=MAX_MESSAGES):
+                 queue_length=MAX_MESSAGES,
+                 debug_stderr=False):
 
         def get_client():
             return SimpleClient(self._zmq_context,
@@ -183,6 +184,7 @@ class ZmqPubSender(object):
                                 queue_length)
 
         self.pool = Pool(get_client, pool_size)
+        self.debug_stderr = debug_stderr
 
     def send_message(self, msg):
         """
@@ -191,4 +193,7 @@ class ZmqPubSender(object):
         :param msg: Dictionary representing the message.
         """
         json_msg = json.dumps(msg)
+        if self.debug_stderr:
+            sys.stderr.write(json_msg)
+            sys.stderr.flush()
         self.pool.send(json_msg)

@@ -64,6 +64,16 @@ class TestZmqPubSender(object):
         eq_(mock_socket.send.call_count, 1)
         mock_socket.send.assert_called_with(json_msg)
 
+    def test_debug_stderr(self):
+        msg = {'milk': 'shake'}
+        json_msg = json.dumps(msg)
+        self.sender.debug_stderr = True
+        with patch('sys.stderr') as mock_stderr:
+            self.sender.send_message(msg)
+            eq_(mock_stderr.write.call_count, 1)
+            eq_(mock_stderr.flush.call_count, 1)
+            mock_stderr.write.assert_called_with(json_msg)
+
 
 @patch('sys.stdout')
 def test_stdout_sender(mock_stdout):
