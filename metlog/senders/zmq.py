@@ -41,9 +41,10 @@ class SimpleClient(object):
         self.connect()
 
     def connect(self):
-        # Socket to actually doi pub/sub
+        # Socket to actually do pub/sub
         self.socket = self.context.socket(zmq.PUB)
-        self.socket.connect(self.connect_bind)
+        for bindstr in self.connect_bind:
+            self.socket.connect(bindstr)
         self.socket.setsockopt(zmq.LINGER, 0)
         self.socket.setsockopt(zmq.HWM, self.hwm)
 
