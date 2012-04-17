@@ -172,13 +172,13 @@ class ZmqPubSender(object):
             raise ValueError('Must have `pyzmq` installed to use ZmqPubSender')
         return super(ZmqPubSender, cls).__new__(cls)
 
-    def __init__(self, connect_bind,
+    def __init__(self, bindstrs,
                  pool_size=10,
                  queue_length=MAX_MESSAGES):
 
         def get_client():
             return SimpleClient(self._zmq_context,
-                                connect_bind,
+                                bindstrs,
                                 queue_length)
 
         self.pool = Pool(get_client, pool_size)
