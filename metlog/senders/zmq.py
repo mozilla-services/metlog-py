@@ -178,6 +178,9 @@ class ZmqPubSender(object):
                  queue_length=MAX_MESSAGES,
                  debug_stderr=False):
 
+        if isinstance(bindstrs, basestring):
+            bindstrs = [bindstrs]
+
         def get_client():
             return SimpleClient(self._zmq_context,
                                 bindstrs,

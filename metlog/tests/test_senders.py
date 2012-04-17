@@ -36,12 +36,12 @@ class TestZmqPubSender(object):
         self.mock_zmq_context.stop()
 
     def _make_one(self):
-        return ZmqPubSender(bindstrs='bindstr', pool_size=1)
+        return ZmqPubSender(bindstrs='bindstr', pool_size=2)
 
-    def xtest_publ_threadsafe(self):
+    def test_publ_threadsafe(self):
 
         def reentrant():
-            self.sender.publisher
+            self.sender.send_message('foo')
 
         t0 = threading.Thread(target=reentrant)
         t1 = threading.Thread(target=reentrant)
@@ -50,7 +50,9 @@ class TestZmqPubSender(object):
         t1.start()
         time.sleep(0.01)  # give it time to ensure publisher is accessed
         # the socket call should have happened twice, once for each thread
-        eq_(self.mock_zmq_context.socket.call_count, 2)
+        mock_socket = self.mock_zmq_context.socket()
+        eq_(mock_socket.connect.call_count, 2)
+        eq_(mock_socket.send.call_count, 2)
 
     def test_send(self):
         msg = {'this': 'is',
@@ -59,9 +61,11 @@ class TestZmqPubSender(object):
         json_msg = json.dumps(msg)
         self.sender.send_message(msg)
         mock_socket = self.mock_zmq_context.socket()
-        eq_(mock_socket.connect.call_count, 1)
-        eq_(mock_socket.connect.call_args, ('bindstr'))
+
+        eq_(mock_socket.connect.call_count, 2)
+        eq_(mock_socket.connect.call_args, (('bindstr',), {}))
         eq_(mock_socket.send.call_count, 1)
+
         mock_socket.send.assert_called_with(json_msg)
 
     def test_debug_stderr(self):
