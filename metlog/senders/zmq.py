@@ -197,6 +197,6 @@ class ZmqPubSender(object):
         """
         json_msg = json.dumps(msg)
         if self.debug_stderr:
-            sys.stderr.write(json_msg)
+            sys.stderr.write(json_msg + '\n')
             sys.stderr.flush()
         self.pool.send(json_msg)
