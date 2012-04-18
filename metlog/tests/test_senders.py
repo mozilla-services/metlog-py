@@ -76,7 +76,7 @@ class TestZmqPubSender(object):
             self.sender.send_message(msg)
             eq_(mock_stderr.write.call_count, 1)
             eq_(mock_stderr.flush.call_count, 1)
-            mock_stderr.write.assert_called_with(json_msg)
+            mock_stderr.write.assert_called_with(json_msg + '\n')
 
 
 @patch('sys.stdout')
