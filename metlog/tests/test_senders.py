@@ -70,7 +70,7 @@ class TestZmqPubSender(object):
 
     def test_debug_stderr(self):
         msg = {'milk': 'shake'}
-        json_msg = json.dumps(msg)
+        json_msg = "%s\n" % json.dumps(msg)
         self.sender.debug_stderr = True
         with patch('sys.stderr') as mock_stderr:
             self.sender.send_message(msg)

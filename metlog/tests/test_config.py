@@ -16,6 +16,7 @@ from metlog.client import MetlogClient
 from metlog.config import client_from_text_config
 from metlog.senders import DebugCaptureSender
 from mock import Mock
+from mock import patch
 from nose.tools import assert_raises, eq_, ok_
 import os
 
@@ -112,6 +113,7 @@ def test_filters_config():
                 ]
     eq_(client.filters, expected)
 
+
 def test_plugins_config():
     cfg_txt = """
     [metlog]
@@ -128,7 +130,79 @@ def test_plugins_config():
     """
     client = client_from_text_config(cfg_txt, 'metlog')
     actual = client.dummy(verbose=True)
-    expected = {'host': 'lolcathost', 
+    expected = {'host': 'lolcathost',
      'foo': 'bar', 'some_list': ['dog', 'cat', 'bus'],
      'port': 8080}
     assert actual == expected
+
+
+def test_handshake_sender_no_backend():
+    cfg_txt = """
+    [metlog]
+    sender_class = metlog.senders.ZmqHandshakePubSender
+    sender_handshake_bind = tcp://localhost:5180
+    sender_connect_bind = tcp://localhost:5190
+    sender_handshake_timeout = 200
+    sender_hwm = 100
+    """
+    import json
+    import sys   # NOQA
+    client = client_from_text_config(cfg_txt, 'metlog')
+    msg = {'milk': 'shake'}
+    expected = "%s\n" % json.dumps(msg)
+    with patch('sys.stderr') as mock_stderr:
+        client.send_message(msg)
+        eq_(mock_stderr.write.call_count, 1)
+        eq_(mock_stderr.flush.call_count, 1)
+        call_args = mock_stderr.write.call_args[0]
+        eq_(call_args[0], expected)
+
+
+from metlog.senders.zmq import ZmqSender
+import zmq
+
+
+class FakeLogstash(ZmqSender):
+    @classmethod
+    def run(cls):
+        syncclient = ZmqSender._zmq_context.socket(zmq.REP)
+        syncclient.bind('tcp://*:5180')
+        syncclient.recv()
+        syncclient.send('')
+
+
+def test_handshake_sender_with_backend():
+    # TODO: add test to make sure that connectinos only send stuff to
+    # the socket and not to the stderr output
+    cfg_txt = """
+    [metlog]
+    sender_class = metlog.senders.ZmqHandshakePubSender
+    sender_handshake_bind = tcp://localhost:5180
+    sender_connect_bind = tcp://localhost:5190
+    sender_handshake_timeout = 200
+    sender_hwm = 100
+    """
+    import json
+    import sys   # NOQA
+
+    # Startup the fake Logstash
+    import threading
+    logstash = threading.Thread(target=FakeLogstash.run)
+    logstash.daemon = True
+    logstash.start()
+
+    client = client_from_text_config(cfg_txt, 'metlog')
+    with patch.object(client.sender, 'pool') as mock_pool:
+        msg = {'milk': 'shake'}
+
+        # Note that this JSON dump does *not* have a newline appended
+        # to it.  Only JSON messages to stderr have the newline
+        expected = json.dumps(msg)
+        with patch('sys.stderr') as mock_stderr:
+            client.send_message(msg)
+            eq_(mock_stderr.write.call_count, 0)
+            eq_(mock_stderr.flush.call_count, 0)
+
+        eq_(mock_pool.send.call_count, 1)
+        call_args = mock_pool.send.call_args[0]
+        eq_(call_args[0], expected)
