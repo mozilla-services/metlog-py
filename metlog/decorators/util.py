@@ -21,7 +21,7 @@ def return_fq_name(func, klass=None):
     func_module = getattr(func, '__module__', None)
 
     if klass:
-        name = "%s:%s.%s" % (klass.__module__, \
+        name = "%s.%s.%s" % (klass.__module__, \
                              klass.__name__, \
                              'PyCallable')
     elif func_name:
@@ -31,7 +31,7 @@ def return_fq_name(func, klass=None):
         # and that means the function is not yet bound to an object
         # instance yet
         # Just grab the containing module and the function name
-        name = "%s:%s" % (func_module, func_name)
+        name = "%s.%s" % (func_module, func_name)
     else:
         # This shouldn't happen, but we don't really want to throw
         # errors just because we can't get some fake arbitrary
