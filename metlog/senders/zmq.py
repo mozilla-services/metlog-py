@@ -188,7 +188,18 @@ class Pool(object):
             self._clients.put(client)
             self._all_clients.append(client)
 
-        def reconnect_clients():
+        # Connect the clients on a background thread so that we can
+        # startup quickly
+        self._connect_thread_started = False
+        self.reconnect_clients()
+
+    def reconnect_clients(self):
+        with self._stop_lock:
+            if self._connect_thread_started:
+                return
+            self._connect_thread_started = True
+
+        def background_thread():
             while True:
                 for client in self._all_clients:
                     client.connect()
@@ -196,9 +207,7 @@ class Pool(object):
                     break
                 time.sleep(5)
 
-        # Connect the clients on a background thread so that we can
-        # startup quickly
-        self._connect_thread = threading.Thread(target=reconnect_clients)
+        self._connect_thread = threading.Thread(target=background_thread)
         self._connect_thread.daemon = True
         self._connect_thread.start()
 

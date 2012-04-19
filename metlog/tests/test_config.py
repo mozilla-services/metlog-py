@@ -158,22 +158,7 @@ def test_handshake_sender_no_backend():
         eq_(call_args[0], expected)
 
 
-from metlog.senders.zmq import ZmqSender
-import zmq
-
-
-class FakeLogstash(ZmqSender):
-    @classmethod
-    def run(cls):
-        syncclient = ZmqSender._zmq_context.socket(zmq.REP)
-        syncclient.bind('tcp://*:5180')
-        syncclient.recv()
-        syncclient.send('')
-
-
 def test_handshake_sender_with_backend():
-    # TODO: add test to make sure that connectinos only send stuff to
-    # the socket and not to the stderr output
     cfg_txt = """
     [metlog]
     sender_class = metlog.senders.ZmqHandshakePubSender
@@ -185,24 +170,31 @@ def test_handshake_sender_with_backend():
     import json
     import sys   # NOQA
 
-    # Startup the fake Logstash
-    import threading
-    logstash = threading.Thread(target=FakeLogstash.run)
-    logstash.daemon = True
-    logstash.start()
+    # Redirect stderr
+    with patch('sys.stderr') as mock_stderr:
 
-    client = client_from_text_config(cfg_txt, 'metlog')
-    with patch.object(client.sender, 'pool') as mock_pool:
-        msg = {'milk': 'shake'}
+        # Patch the reconnect_clients call so that we don't spawn a
+        # background thread to bind to a server
+        with patch('metlog.senders.zmq.Pool.reconnect_clients'):
 
-        # Note that this JSON dump does *not* have a newline appended
-        # to it.  Only JSON messages to stderr have the newline
-        expected = json.dumps(msg)
-        with patch('sys.stderr') as mock_stderr:
-            client.send_message(msg)
-            eq_(mock_stderr.write.call_count, 0)
-            eq_(mock_stderr.flush.call_count, 0)
+            client = client_from_text_config(cfg_txt, 'metlog')
 
-        eq_(mock_pool.send.call_count, 1)
-        call_args = mock_pool.send.call_args[0]
-        eq_(call_args[0], expected)
+            # Now patch the ZmqHandshakePubSender and replace the pool
+            # with a mock - this will make sure that we never send
+            # anything to stderr
+            with patch.object(client.sender, 'pool') as mock_pool:
+                msg = {'milk': 'shake'}
+
+                # Note that this JSON dump does *not* have a newline appended
+                # to it.  Only JSON messages to stderr have the newline
+                expected = json.dumps(msg)
+
+                client.send_message(msg)
+                eq_(mock_stderr.write.call_count, 0)
+                eq_(mock_stderr.flush.call_count, 0)
+
+            # Check that we called send once with the proper JSON
+            # string to the pool
+            eq_(mock_pool.send.call_count, 1)
+            call_args = mock_pool.send.call_args[0]
+            eq_(call_args[0], expected)
