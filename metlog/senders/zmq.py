@@ -32,58 +32,57 @@ import time
 MAX_MESSAGES = 1000
 
 
-class SimpleClient(object):
-    def __init__(self, context, connect_bind, hwm=200):
+class BaseClient(object):
+    def __init__(self, context):
         self.context = context
+
+        # We need to synchronize around the connected flag
+        self._connect_lock = threading.RLock()
+        self.set_connected(False)
+
+    def set_connected(self, state):
+        with self._connect_lock:
+            self._connected = state
+        return self.connected()
+
+    def connected(self):
+        with self._connect_lock:
+            return self._connected
+
+
+class SimpleClient(BaseClient):
+    def __init__(self, context, connect_bind, hwm=200):
+        super(SimpleClient, self).__init__(context)
 
         self.connect_bind = connect_bind
         self.hwm = hwm
         self.socket = None
 
-        # We need to synchronize around the connected flag
-        self._connect_lock = threading.RLock()
-        self._connected = False
-
-    def connected(self):
-        with self._connect_lock:
-            return self._connect
+        # The pub socket must be created
+        # Socket to actually do pub/sub
+        self.socket = self.context.socket(zmq.PUB)
+        for bindstr in self.connect_bind:
+            self.socket.connect(bindstr)
+        self.socket.setsockopt(zmq.LINGER, 0)
+        self.socket.setsockopt(zmq.HWM, self.hwm)
+        self.set_connected(True)
 
     def connect(self):
         """
-        Connect or re-connect a client if necessary.
-
-        If the client is connected, return True
+        For the SimpleClient, connect() does nothing as the connect is
+        handled in the initializer
         """
-
-        with self._connect_lock:
-            if self._connected:
-                return True
-            # Socket to actually do pub/sub
-            self.socket = self.context.socket(zmq.PUB)
-            for bindstr in self.connect_bind:
-                self.socket.connect(bindstr)
-            self.socket.setsockopt(zmq.LINGER, 0)
-            self.socket.setsockopt(zmq.HWM, self.hwm)
-            self._connected = True
+        return True
 
     def send(self, msg):
         self.socket.send(msg)
 
-    def close(self):
-        try:
-            self.socket.close()
-            with self._connect_lock:
-                self._connected = False
-        except zmq.ZMQError:
-            pass
 
-
-class HandshakingClient(object):
+class HandshakingClient(BaseClient):
     def __init__(self, context, handshake_bind, connect_bind,
                  handshake_timeout=200,
                  hwm=200):
-
-        self.context = context
+        super(HandshakingClient, self).__init__(context)
 
         self.handshake_bind = handshake_bind
         self.connect_bind = connect_bind
@@ -94,10 +93,6 @@ class HandshakingClient(object):
         self.handshake_socket = None
         self.socket = None
 
-        # We need to synchronize around the connected flag
-        self._connect_lock = threading.RLock()
-        self.set_connected(False)
-
         # Socket to actually do pub/sub
         self.socket = self.context.socket(zmq.PUB)
         self.socket.connect(self.connect_bind)
@@ -106,9 +101,8 @@ class HandshakingClient(object):
 
     def connect(self):
         """
-        Connect or re-connect a client if necessary.
-
-        If the client is connected, return True
+        Connect To the 0mq REPL socket and attempt a handshake to
+        ensure we're properly connected.
         """
         # Socket to send handshake signals
         self.handshake_socket = None
@@ -132,15 +126,6 @@ class HandshakingClient(object):
             # Shutdown the handshake
             if self.handshake_socket != None:
                 self.handshake_socket.close()
-
-    def set_connected(self, state):
-        with self._connect_lock:
-            self._connected = state
-        return self.connected()
-
-    def connected(self):
-        with self._connect_lock:
-            return self._connected
 
     def send(self, msg):
         try:
