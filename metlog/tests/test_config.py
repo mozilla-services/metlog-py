@@ -147,15 +147,16 @@ def test_handshake_sender_no_backend():
     """
     import json
     import sys   # NOQA
-    client = client_from_text_config(cfg_txt, 'metlog')
     msg = {'milk': 'shake'}
     expected = "%s\n" % json.dumps(msg)
     with patch('sys.stderr') as mock_stderr:
-        client.send_message(msg)
-        eq_(mock_stderr.write.call_count, 1)
-        eq_(mock_stderr.flush.call_count, 1)
-        call_args = mock_stderr.write.call_args[0]
-        eq_(call_args[0], expected)
+        with patch('metlog.senders.zmq.Pool.start_reconnecting'):
+            client = client_from_text_config(cfg_txt, 'metlog')
+            client.send_message(msg)
+            eq_(mock_stderr.write.call_count, 1)
+            eq_(mock_stderr.flush.call_count, 1)
+            call_args = mock_stderr.write.call_args[0]
+            eq_(call_args[0], expected)
 
 
 def test_handshake_sender_with_backend():
@@ -166,6 +167,7 @@ def test_handshake_sender_with_backend():
     sender_connect_bind = tcp://localhost:5190
     sender_handshake_timeout = 200
     sender_hwm = 100
+    sender_livecheck = 30
     """
     import json
     import sys   # NOQA
@@ -180,8 +182,10 @@ def test_handshake_sender_with_backend():
             client = client_from_text_config(cfg_txt, 'metlog')
 
             # Now patch the ZmqHandshakePubSender and replace the pool
-            # with a mock - this will make sure that we never send
-            # anything to stderr
+            # with a mock - this will make sure that all requests to
+            # obtain a new 0mq socket will just pass so nothing will
+            # go to stderr
+            eq_(client.sender.pool._livecheck, 30)
             with patch.object(client.sender, 'pool') as mock_pool:
                 msg = {'milk': 'shake'}
 

@@ -96,7 +96,13 @@ class HandshakingClient(object):
 
         # We need to synchronize around the connected flag
         self._connect_lock = threading.RLock()
-        self._connected = False
+        self.set_connected(False)
+
+        # Socket to actually do pub/sub
+        self.socket = self.context.socket(zmq.PUB)
+        self.socket.connect(self.connect_bind)
+        self.socket.setsockopt(zmq.LINGER, 0)
+        self.socket.setsockopt(zmq.HWM, self.hwm)
 
     def connect(self):
         """
@@ -104,19 +110,12 @@ class HandshakingClient(object):
 
         If the client is connected, return True
         """
-        with self._connect_lock:
-            if self._connected:
-                return True
-            # Socket to send handshake signals
+        # Socket to send handshake signals
+        self.handshake_socket = None
+        try:
             self.handshake_socket = self.context.socket(zmq.REQ)
             self.handshake_socket.connect(self.handshake_bind)
             self.handshake_socket.setsockopt(zmq.LINGER, 0)
-
-            # Socket to actually do pub/sub
-            self.socket = self.context.socket(zmq.PUB)
-            self.socket.connect(self.connect_bind)
-            self.socket.setsockopt(zmq.LINGER, 0)
-            self.socket.setsockopt(zmq.HWM, self.hwm)
 
             poll = zmq.Poller()
             poll.register(self.handshake_socket, zmq.POLLIN)
@@ -126,13 +125,18 @@ class HandshakingClient(object):
 
             if socks.get(self.handshake_socket) == zmq.POLLIN:
                 self.handshake_socket.recv()
-                self.handshake_socket.close()
-                self._connected = True
-                return True
+                return self.set_connected(True)
             else:
-                self._connected = False
-                self.close()
-                return False
+                return self.set_connected(False)
+        finally:
+            # Shutdown the handshake
+            if self.handshake_socket != None:
+                self.handshake_socket.close()
+
+    def set_connected(self, state):
+        with self._connect_lock:
+            self._connected = state
+        return self.connected()
 
     def connected(self):
         with self._connect_lock:
@@ -146,20 +150,8 @@ class HandshakingClient(object):
                 sys.stderr.write("%s\n" % msg)
                 sys.stderr.flush()
         except zmq.ZMQError:
-            self.close()
             sys.stderr.write("%s\n" % msg)
             sys.stderr.flush()
-
-    def close(self):
-        try:
-            self.handshake_socket.close()
-        except zmq.ZMQError:
-            pass
-
-        try:
-            self.socket.close()
-        except zmq.ZMQError:
-            pass
 
 
 class Pool(object):
@@ -173,11 +165,12 @@ class Pool(object):
     :param size: The number of clients to create in the pool
     """
 
-    def __init__(self, client_factory, size=10):
+    def __init__(self, client_factory, size=10, livecheck=10):
         self._stop_lock = threading.RLock()
         self._stopped = False
 
         self._clients = Queue.Queue()
+        self._livecheck = livecheck
 
         # This list is only used to handle reconnects if the
         # connection to the 0mq subscriber dies
@@ -198,7 +191,7 @@ class Pool(object):
                     client.connect()
                 if self.is_stopped():
                     break
-                time.sleep(5)
+                time.sleep(self._livecheck)
 
         self._connect_thread = threading.Thread(target=background_thread)
         self._connect_thread.daemon = True
@@ -231,7 +224,6 @@ class Pool(object):
         """
         with self._stop_lock:
             self._stopped = True
-            print "Background thread stopped!"
 
     def is_stopped(self):
         with self._stop_lock:
@@ -271,6 +263,7 @@ class ZmqPubSender(ZmqSender):
     def __init__(self, bindstrs,
                  pool_size=10,
                  queue_length=MAX_MESSAGES,
+                 livecheck=10,
                  debug_stderr=False):
 
         if isinstance(bindstrs, basestring):
@@ -281,7 +274,9 @@ class ZmqPubSender(ZmqSender):
                                 bindstrs,
                                 queue_length)
 
-        self.pool = Pool(get_client, pool_size)
+        self.pool = Pool(client_factory=get_client,
+                size=pool_size,
+                livecheck=livecheck)
         self.debug_stderr = debug_stderr
 
 
@@ -300,6 +295,7 @@ class ZmqHandshakePubSender(ZmqSender):
 
     def __init__(self, handshake_bind, connect_bind,
             handshake_timeout, pool_size=10, hwm=200,
+            livecheck=10,
             debug_stderr=False):
 
         def get_client():
@@ -310,5 +306,7 @@ class ZmqHandshakePubSender(ZmqSender):
             client.connect()
             return client
 
-        self.pool = Pool(get_client, pool_size)
+        self.pool = Pool(client_factory=get_client,
+                size=pool_size,
+                livecheck=livecheck)
         self.debug_stderr = debug_stderr
