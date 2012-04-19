@@ -191,13 +191,6 @@ class Pool(object):
         # Connect the clients on a background thread so that we can
         # startup quickly
         self._connect_thread_started = False
-        self.reconnect_clients()
-
-    def reconnect_clients(self):
-        with self._stop_lock:
-            if self._connect_thread_started:
-                return
-            self._connect_thread_started = True
 
         def background_thread():
             while True:
@@ -209,6 +202,15 @@ class Pool(object):
 
         self._connect_thread = threading.Thread(target=background_thread)
         self._connect_thread.daemon = True
+
+        self.start_reconnecting()
+
+    def start_reconnecting(self):
+        with self._stop_lock:
+            if self._connect_thread_started:
+                return
+            self._connect_thread_started = True
+
         self._connect_thread.start()
 
     def send(self, msg):
@@ -227,8 +229,6 @@ class Pool(object):
         """
         Shutdown the background reconnection thread
         """
-        import pdb
-        pdb.set_trace()
         with self._stop_lock:
             self._stopped = True
             print "Background thread stopped!"

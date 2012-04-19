@@ -175,7 +175,7 @@ def test_handshake_sender_with_backend():
 
         # Patch the reconnect_clients call so that we don't spawn a
         # background thread to bind to a server
-        with patch('metlog.senders.zmq.Pool.reconnect_clients'):
+        with patch('metlog.senders.zmq.Pool.start_reconnecting'):
 
             client = client_from_text_config(cfg_txt, 'metlog')
 
