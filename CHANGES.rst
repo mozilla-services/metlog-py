@@ -1,4 +1,19 @@
-0.8.3 - ????-??-??
+0.8.4 - 2012-04-18
+==================
+
+- "Getting started" documentation
+- Overall documentation ToC
+- Added Metlog stdlib logging handler so logging in dependency libraries can be
+  routed to Metlog
+- Use 0mq connection pool instead of creating a new 0mq connection for each new
+  thread
+- Initial implementation of 0mq "Handshaking Client" which will use a separate
+  control channel to establish communication with 0mq subscribers.
+- Added `debug_stderr` flag to ZmqPubSender which will also send all output to
+  stderr for capturing output when error messages aren't getting through to the
+  Metlog listener.
+
+0.8.3 - 2012-04-05
 ==================
 
 - Added support for simple message filtering directly in the metlog client
