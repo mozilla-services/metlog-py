@@ -145,7 +145,7 @@ class MetlogDecorator(object):
         else:
             sorted_args = tuple(self.args)
 
-        key = (self.__class__, self.args, sorted_kw)
+        key = (self.__class__, sorted_args, sorted_kw)
 
         self._metlog_decorators.add(key)
 
