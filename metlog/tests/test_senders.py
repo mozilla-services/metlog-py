@@ -79,26 +79,42 @@ class TestZmqPubSender(object):
             mock_stderr.write.assert_called_with(json_msg + '\n')
 
 
-@patch('sys.stdout')
-def test_stdout_sender(mock_stdout):
-    msg = {'this': 'is',
-           'a': 'test',
-           'payload': 'PAYLOAD'}
-    sender = StdOutSender()
-    sender.send_message(msg)
-    eq_(mock_stdout.write.call_count, 1)
-    eq_(mock_stdout.flush.call_count, 1)
-    mock_stdout.write.assert_called_with(msg['payload'] + '\n')
+def formatter(msg):
+    output = []
+    for key, value in msg.items():
+        output.append('%s;;;%s' % (str(key), str(value)))
+    return '\n'.join(output)
 
 
 @patch('sys.stdout')
-def test_stdout_sender_json(mock_stdout):
-    msg = {'this': 'is',
-           'a': 'test',
-           'payload': 'PAYLOAD'}
-    sender = StdOutSender(payload_only=False)
-    sender.send_message(msg)
-    eq_(mock_stdout.write.call_count, 1)
-    eq_(mock_stdout.flush.call_count, 1)
-    write_args = mock_stdout.write.call_args
-    eq_(json.loads(write_args[0][0]), msg)
+class TestStdOutSender(object):
+    def _make_one(self, formatter=None):
+        return StdOutSender(formatter=formatter)
+
+    def setUp(self):
+        self.msg = {'this': 'is',
+                    'a': 'test',
+                    'payload': 'PAYLOAD'}
+
+    def test_default_formatter(self, mock_stdout):
+        sender = self._make_one()
+        sender.send_message(self.msg)
+        eq_(mock_stdout.write.call_count, 1)
+        eq_(mock_stdout.flush.call_count, 1)
+        write_args = mock_stdout.write.call_args
+        eq_(json.loads(write_args[0][0]), self.msg)
+
+    def test_custom_formatter(self, mock_stdout):
+        sender = self._make_one(formatter=formatter)
+        sender.send_message(self.msg)
+        eq_(mock_stdout.write.call_count, 1)
+        eq_(mock_stdout.flush.call_count, 1)
+        mock_stdout.write.assert_called_with(formatter(self.msg) + '\n')
+
+    def test_custom_formatter_dotted(self, mock_stdout):
+        dotted = 'metlog.tests.test_senders.formatter'
+        sender = self._make_one(formatter=dotted)
+        sender.send_message(self.msg)
+        eq_(mock_stdout.write.call_count, 1)
+        eq_(mock_stdout.flush.call_count, 1)
+        mock_stdout.write.assert_called_with(formatter(self.msg) + '\n')

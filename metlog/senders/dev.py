@@ -17,25 +17,38 @@ except ImportError:
     import json  # NOQA
 import sys
 
+from metlog.path import resolve_name
+
 
 class StreamSender(object):
     """
     Emits messages to a provided stream object.
     """
-    def __init__(self, stream, payload_only=True):
+    def __init__(self, stream, formatter=None):
         """
         :param stream: Stream object to which the messages should be written.
-        :param payload_only: If False then the entire JSON version of each
-                             message will be written. If True, only the
-                             `payload` value from each message will be written.
+        :param formatter: Optional callable (or dotted name identifier) that
+                          accepts a msg dictionary and returns a formatted
+                          string to be written to the stream.
         """
         self.stream = stream
-        self.payload_only = payload_only
+        if formatter is None:
+            self.formatter = self.default_formatter
+        else:
+            if not callable(formatter):
+                formatter = resolve_name(formatter)
+            self.formatter = formatter
+
+    def default_formatter(self, msg):
+        """
+        Default formatter, just converts the message to 4-space-indented
+        JSON.
+        """
+        return json.dumps(msg, indent=4)
 
     def send_message(self, msg):
         """Deliver message to the stream object."""
-        output = (msg['payload'] if self.payload_only
-                  else json.dumps(msg, indent=4))
+        output = self.formatter(msg)
         self.stream.write('%s\n' % output)
         self.stream.flush()
 
