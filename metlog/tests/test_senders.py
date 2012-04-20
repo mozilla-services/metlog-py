@@ -84,9 +84,21 @@ def test_stdout_sender(mock_stdout):
     msg = {'this': 'is',
            'a': 'test',
            'payload': 'PAYLOAD'}
-    json_msg = json.dumps(msg)
     sender = StdOutSender()
     sender.send_message(msg)
     eq_(mock_stdout.write.call_count, 1)
     eq_(mock_stdout.flush.call_count, 1)
-    mock_stdout.write.assert_called_with(json_msg + '\n')
+    mock_stdout.write.assert_called_with(msg['payload'] + '\n')
+
+
+@patch('sys.stdout')
+def test_stdout_sender_json(mock_stdout):
+    msg = {'this': 'is',
+           'a': 'test',
+           'payload': 'PAYLOAD'}
+    sender = StdOutSender(payload_only=False)
+    sender.send_message(msg)
+    eq_(mock_stdout.write.call_count, 1)
+    eq_(mock_stdout.flush.call_count, 1)
+    write_args = mock_stdout.write.call_args
+    eq_(json.loads(write_args[0][0]), msg)
