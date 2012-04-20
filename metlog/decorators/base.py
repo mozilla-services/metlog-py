@@ -38,6 +38,9 @@ class MetlogClientWrapper(object):
     to provide late binding of the MetlogClient so that decorators which use
     Metlog have a chance to be configured prior to affecting the callable which
     is being decorated.
+
+    XXX This is a bit of an anti-pattern, will be refactored into a slightly
+    more sane mechanism soon.
     """
     def __init__(self):
         self.reset()
