@@ -61,6 +61,15 @@ class StdOutSender(StreamSender):
         super(StdOutSender, self).__init__(sys.stdout, *args, **kwargs)
 
 
+class FileSender(StreamSender):
+    """
+    Emits messages to a filesystem file.
+    """
+    def __init__(self, filepath, *args, **kwargs):
+        filestream = open(filepath, 'a')
+        super(FileSender, self).__init__(filestream, *args, **kwargs)
+
+
 class DebugCaptureSender(object):
     """
     Capture up to 100 metlog messages in a circular buffer for inspection
