@@ -18,15 +18,34 @@ except ImportError:
 import sys
 
 
-class StdOutSender(object):
+class StreamSender(object):
     """
-    Emits metlog messages to stdout for dev purposes.
+    Emits messages to a provided stream object.
     """
+    def __init__(self, stream, payload_only=True):
+        """
+        :param stream: Stream object to which the messages should be written.
+        :param payload_only: If False then the entire JSON version of each
+                             message will be written. If True, only the
+                             `payload` value from each message will be written.
+        """
+        self.stream = stream
+        self.payload_only = payload_only
+
     def send_message(self, msg):
-        """JSONify and send to stdout."""
-        json_msg = json.dumps(msg)
-        sys.stdout.write('%s\n' % json_msg)
-        sys.stdout.flush()
+        """Deliver message to the stream object."""
+        output = (msg['payload'] if self.payload_only
+                  else json.dumps(msg, indent=4))
+        self.stream.write('%s\n' % output)
+        self.stream.flush()
+
+
+class StdOutSender(StreamSender):
+    """
+    Emits metlog messages to stdout.
+    """
+    def __init__(self, *args, **kwargs):
+        super(StdOutSender, self).__init__(sys.stdout, *args, **kwargs)
 
 
 class DebugCaptureSender(object):
