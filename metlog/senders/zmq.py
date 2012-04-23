@@ -141,13 +141,15 @@ class HandshakingClient(BaseClient):
 
 class Pool(object):
     """
-    This is a threadsafe poool of 0mq clients.
+    This is a threadsafe pool of 0mq clients.
 
     :param client_factory:
-        a factory function which takes no arguments and will generate
-        client instances. Clients are responsible to rebind themselves
-        if necessary
-    :param size: The number of clients to create in the pool
+        a factory function that creates Client instances
+    :param size:
+        The number of clients to create in the pool
+    :param livecheck:
+        The time in seconds to wait to ping the server
+        from each client
     """
 
     def __init__(self, client_factory, size=10, livecheck=10):
@@ -184,6 +186,10 @@ class Pool(object):
         self.start_reconnecting()
 
     def start_reconnecting(self):
+        """
+        Start the background thread that handles pings to the server
+        to synchronize the initial pub/sub
+        """
         with self._stop_lock:
             if self._connect_thread_started:
                 return
@@ -192,6 +198,9 @@ class Pool(object):
         self._connect_thread.start()
 
     def send(self, msg):
+        """
+        Threadsafely send a single text message over a 0mq socket
+        """
         sock = None
         try:
             sock = self.socket()
@@ -219,7 +228,20 @@ class Pool(object):
 
 
 class ZmqSender(object):
+    """
+    Base class for ZmqPubSender and ZmqHandshakePubSender
+    """
+
     _zmq_context = zmq.Context() if zmq is not None else None
+
+    def __new__(cls, *args, **kwargs):
+        """
+        Just check that we have pyzmq installed
+        """
+        if zmq is None:
+            # no zmq -> no ZmqPubSender
+            raise ValueError('Must have `pyzmq` installed to use ZmqPubSender')
+        return super(ZmqSender, cls).__new__(cls)
 
     def send_message(self, msg):
         """
@@ -239,17 +261,24 @@ class ZmqPubSender(ZmqSender):
     Sends metlog messages out via a ZeroMQ publisher socket.
     """
 
-    def __new__(cls, *args, **kwargs):
-        if zmq is None:
-            # no zmq -> no ZmqPubSender
-            raise ValueError('Must have `pyzmq` installed to use ZmqPubSender')
-        return super(ZmqPubSender, cls).__new__(cls)
-
     def __init__(self, bindstrs,
                  pool_size=10,
                  queue_length=MAX_MESSAGES,
                  livecheck=10,
                  debug_stderr=False):
+        """
+        :param bindstrs:
+            One or more URL strings which 0mq recognizes as an
+            endpoint URL. Either a string or a list of strings is
+            accepted.
+        :param pool_size:
+            The number of connections we maintain to the 0mq backend
+        :param livecheck:
+            Polling interval in seconds between client.connect() calls
+        :param debug_stderr:
+            Boolean flag to send messages to stderr in addition to the
+            actual 0mq socket
+        """
 
         if isinstance(bindstrs, basestring):
             bindstrs = [bindstrs]
@@ -271,17 +300,35 @@ class ZmqHandshakePubSender(ZmqSender):
 
     Redirect all dropped messages to stderr
     """
-    def __new__(cls, *args, **kwargs):
-        if zmq is None:
-            # no zmq -> no ZmqPubSender
-            msg = 'Must have `pyzmq` installed to use ZmqHandshakePubSender'
-            raise ValueError(msg)
-        return super(ZmqHandshakePubSender, cls).__new__(cls)
 
     def __init__(self, handshake_bind, connect_bind,
             handshake_timeout, pool_size=10, hwm=200,
             livecheck=10,
             debug_stderr=False):
+        """
+        :param handshake_bind:
+            A single 0mq recognized endpoint URL.
+            This should point to the endpoint for handshaking of
+            connections
+        :param connect_bind:
+            A single 0mq recognized endpoint URL.
+            This should point ot the endpoint for sending actual
+            Metlog messages.
+        :param handshake_timeout:
+            Timeout in ms to wait for responses from the 0mq server on
+            handshake
+        :param pool_size:
+            The number of connections we maintain to the 0mq backend
+        :param hwm:
+            High water mark. Set the maximum number of messages to
+            queue before dropping messages in case of a slow reading
+            0mq server.
+        :param livecheck:
+            Polling interval in seconds between client.connect() calls
+        :param debug_stderr:
+            Boolean flag to send messages to stderr in addition to the
+            actual 0mq socket
+        """
 
         def get_client():
             client = HandshakingClient(self._zmq_context,
