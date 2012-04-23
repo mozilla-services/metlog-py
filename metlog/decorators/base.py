@@ -29,7 +29,7 @@ from metlog.decorators.util import return_fq_name
 try:
     import json
 except:
-    import simplejson as json
+    import simplejson as json  # NOQA
 
 
 class MetlogClientWrapper(object):

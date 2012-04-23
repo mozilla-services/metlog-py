@@ -330,9 +330,8 @@ class MetlogHandler(logging.Handler):
             severity = SEVERITY.WARNING
         elif record.levelno == logging.ERROR:
             severity = SEVERITY.ERROR
-        else: # critical
+        else:  # critical
             severity = SEVERITY.CRITICAL
 
         self.metlog.metlog(type='oldstyle', severity=severity,
                 payload=record.msg)
-
