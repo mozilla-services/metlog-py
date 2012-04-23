@@ -12,6 +12,7 @@
 #
 # ***** END LICENSE BLOCK *****
 from metlog.senders.zmq import ZmqPubSender  # NOQA
+from metlog.senders.zmq import ZmqHandshakePubSender  # NOQA
 from metlog.senders.dev import FileSender  # NOQA
 from metlog.senders.dev import StdOutSender  # NOQA
 from metlog.senders.dev import StreamSender  # NOQA

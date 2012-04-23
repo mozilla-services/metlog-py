@@ -12,7 +12,6 @@
 #   Rob Miller (rmiller@mozilla.com)
 #
 # ***** END LICENSE BLOCK *****
-from metlog.config import client_from_text_config
 from metlog.decorators.base import CLIENT_WRAPPER
 from metlog.decorators import incr_count
 from metlog.decorators import timeit
@@ -48,7 +47,7 @@ class TestCannedDecorators(DecoratorTestBase):
         eq_(len(msgs), 2)
 
         for msg in msgs:
-            expected = 'metlog.tests.test_decorators:ordering_1'
+            expected = 'metlog.tests.test_decorators.ordering_1'
             eq_(msg['fields']['name'], expected)
 
         # First msg should be counter, then timer as decorators are
@@ -68,7 +67,7 @@ class TestCannedDecorators(DecoratorTestBase):
         eq_(len(msgs), 2)
 
         for msg in msgs:
-            expected = 'metlog.tests.test_decorators:ordering_2'
+            expected = 'metlog.tests.test_decorators.ordering_2'
             eq_(msg['fields']['name'], expected)
 
         # Ordering of log messages should occur in the in->out
@@ -154,13 +153,13 @@ class TestDisabledDecorators(DecoratorTestBase):
             return x + y
 
         orig_disabled = CLIENT_WRAPPER.client._disabled_timers
-        omit = ('metlog.tests.test_decorators:simple')
+        omit = ('metlog.tests.test_decorators.simple')
         CLIENT_WRAPPER.client._disabled_timers = set([omit])
 
         simple(1, 2)
         simple2(3, 4)
         msgs = [json.loads(m) for m in CLIENT_WRAPPER.client.sender.msgs]
         eq_(len(msgs), 1)
-        eq_(msgs[0]['fields']['name'], 'metlog.tests.test_decorators:simple2')
+        eq_(msgs[0]['fields']['name'], 'metlog.tests.test_decorators.simple2')
 
         CLIENT_WRAPPER.client._disabled_timers = orig_disabled

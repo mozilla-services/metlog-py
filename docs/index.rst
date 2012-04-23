@@ -19,12 +19,16 @@ Contents
 ========
 
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 5
 
    getstarted
    config
+   api/config
    api/client
    api/senders
+   api/decorators
+   api/exceptions
+
 
 Indices and tables
 ==================
