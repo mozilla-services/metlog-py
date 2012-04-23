@@ -13,7 +13,7 @@
 #   Victor Ng (vng@mozilla.com)
 #
 # ***** END LICENSE BLOCK *****
-
+from __future__ import absolute_import
 import random
 import threading
 import time

@@ -11,6 +11,7 @@
 #   Rob Miller (rmiller@mozilla.com)
 #
 # ***** END LICENSE BLOCK *****
+from __future__ import absolute_import
 from datetime import datetime
 from metlog.client import MetlogClient
 from mock import Mock
