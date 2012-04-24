@@ -70,15 +70,13 @@ def _convert(value):
     return do_convert(value)
 
 
-def client_from_dict_config(config, client=None, plugin_param=None):
+def client_from_dict_config(config, client=None):
     """
     Configure a metlog client, fully configured w/ sender and plugins.
 
     :param config: Configuration dictionary.
     :param client: MetlogClient instance to configure. If None, one will be
                    created.
-    :param plugin_param: Configuration dictionary for methods that will be
-                         bound into the MetlogClient instance
 
     The configuration dict supports the following values:
 
@@ -122,6 +120,7 @@ def client_from_dict_config(config, client=None, plugin_param=None):
     logger = config.get('logger', '')
     severity = config.get('severity', 6)
     disabled_timers = config.get('disabled_timers', [])
+    plugin_param = config.pop('plugins', {})
     resolver = DottedNameResolver()
 
     filters = [(resolver.resolve(filter_dottedname), filter_config) for
@@ -139,11 +138,10 @@ def client_from_dict_config(config, client=None, plugin_param=None):
         client.setup(sender, logger, severity, disabled_timers, filters)
 
     # Load plugins and pass in config
-    if plugin_param != None:
-        for plugin_name, plugin_config in plugin_param.items():
-            config = plugin_config.pop('plugin.provider')
-            plugin = config(plugin_param[plugin_name])
-            client.add_method(plugin_name, plugin)
+    for plugin_name, plugin_config in plugin_param.items():
+        config = plugin_config.pop('plugin.provider')
+        plugin = config(plugin_param[plugin_name])
+        client.add_method(plugin_name, plugin)
 
     return client
 
@@ -208,10 +206,10 @@ def client_from_stream_config(stream, section, client=None):
     # Load any plugin configuration
     plugin_sections = [n for n in config.sections()
                        if n.startswith("%s_plugin" % section)]
-    plugin_param = {}
 
     resolver = DottedNameResolver()
 
+    plugin_param = {}
     for plugin_section in plugin_sections:
         plugin_name = plugin_section.replace("%s_plugin_" % section, '')
         plugin_dict = {}
@@ -223,8 +221,9 @@ def client_from_stream_config(stream, section, client=None):
                 continue
             plugin_dict[opt] = _convert(config.get(plugin_section, opt))
         plugin_param[plugin_name] = plugin_dict
+    client_dict['plugins'] = plugin_param
 
-    client = client_from_dict_config(client_dict, client, plugin_param)
+    client = client_from_dict_config(client_dict, client)
 
     return client
 
