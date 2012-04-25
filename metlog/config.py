@@ -39,6 +39,9 @@ class MetlogClientHolder(object):
     def get_client(self, name):
         """
         Return the specified MetlogClient, creating it if it doesn't exist.
+        *NOTE*: Auto-created MetlogClient instances will *not* yet be usable,
+        it is the downstream developer's responsibility to provide them with a
+        working sender.
 
         :param name: String token identifying the client, also used as the
                      client's `logger` value.
