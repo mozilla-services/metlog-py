@@ -23,55 +23,12 @@ one way (or not at all) when the decorator is originally evaluated, but then to
 be wrapped differently once the config has loaded and the desired final
 behavior has been established.
 """
-from metlog.client import MetlogClient
-from metlog.config import client_from_dict_config
+from metlog.config import CLIENT_HOLDER
 from metlog.decorators.util import return_fq_name
 try:
     import json
 except:
     import simplejson as json  # NOQA
-
-
-class MetlogClientWrapper(object):
-    """
-    This class acts as a lazy proxy of sorts to the MetlogClient. We need this
-    to provide late binding of the MetlogClient so that decorators which use
-    Metlog have a chance to be configured prior to affecting the callable which
-    is being decorated.
-
-    XXX This is a bit of an anti-pattern, will be refactored into a slightly
-    more sane mechanism soon.
-    """
-    def __init__(self):
-        self.reset()
-
-    def activate(self, client_config):
-        """
-        Applies configuration to the wrapped client, allowing it to be used and
-        activating any Metlog decorators that might be in use.
-
-        :param client_config: Dictionary containing MetlogClient configuration.
-        """
-        client_from_dict_config(client_config, client=self.client)
-        disabled_decorators = [k.replace("disable_", '')
-                               for (k, v) in client_config.items()
-                               if (k.startswith('disable_') and v)]
-        self._disabled_decorators = set(disabled_decorators)
-        self.is_activated = True
-
-    def reset(self):
-        """
-        Sets client related instance variables to default settings.
-        """
-        self.client = MetlogClient()
-        self._disabled_decorators = set()
-        self.is_activated = False
-
-    def decorator_is_disabled(self, name):
-        # Check if this particular logger is disabled
-        return name in self._disabled_decorators
-
-CLIENT_WRAPPER = MetlogClientWrapper()
 
 
 class MetlogDecorator(object):
@@ -85,6 +42,17 @@ class MetlogDecorator(object):
     but call the wrapped function) will be used as the decorator.
     """
     def __init__(self, *args, **kwargs):
+        """
+        :param client: Optional MetlogClient instance. Will override any
+                       `client_name` value that may be specified, if provided.
+        :param client_name: Optional `logger` name of a MetlogClient instance
+                            that is stored in the CLIENT_HOLDER
+
+        If neither the `client` nor `client_name` parameters are specified,
+        then CLIENT_HOLDER.default_client will be used.
+        """
+        self._client = kwargs.pop('client', None)
+        self.client_name = kwargs.pop('client_name', '')
         if len(args) == 1 and len(kwargs) == 0 and callable(args[0]):
             # bare decorator, i.e. no arguments
             self.args = None
@@ -101,15 +69,23 @@ class MetlogDecorator(object):
     def decorator_name(self):
         return self.__class__.__name__
 
+    @property
+    def client(self):
+        if self._client is None:
+            if self.client_name:
+                self._client = CLIENT_HOLDER.get_client(self.client_name)
+            else:
+                self._client = CLIENT_HOLDER.default_client
+        return self._client
+
     def predicate(self):
         """
         Called during the rebind process. True return value will rebind such
         that `self.metlog_call` becomes the decorator function, False will
         rebind such that `self._invoke` becomes the decorator function.
         """
-        if not CLIENT_WRAPPER.is_activated:
-            return False
-        if CLIENT_WRAPPER.decorator_is_disabled(self.decorator_name):
+        disabled = CLIENT_HOLDER.global_config.get('disabled_decorators', [])
+        if self.decorator_name in disabled:
             return False
         return True
 

@@ -12,9 +12,7 @@
 This module provides helpers to handle configuration details as well
 as providing some late binding helper objects which can be used to
 hook into plugin systems.
-
 """
-from metlog.client import MetlogClient
 from metlog.exceptions import EnvironmentNotFoundError
 from metlog.path import DottedNameResolver
 from textwrap import dedent
@@ -22,9 +20,73 @@ import ConfigParser
 import StringIO
 import os
 import re
+import threading
 
 _IS_INTEGER = re.compile('^-?[0-9].*')
 _IS_ENV_VAR = re.compile('\$\{(\w.*)?\}')
+
+
+class MetlogClientHolder(object):
+    """
+    This is meant to be used as a singleton class that will hold references to
+    MetlogClient instances and any required process-wide config data.
+    """
+    def __init__(self):
+        self._clients = dict()
+        self.global_config = dict()
+        self.lock = threading.Lock()  # write lock for adding clients
+
+    def get_client(self, name):
+        """
+        Return the specified MetlogClient, creating it if it doesn't exist.
+
+        :param name: String token identifying the client, also used as the
+                     client's `logger` value.
+        """
+        client = self._clients.get(name)
+        if client is None:
+            with self.lock:
+                # check again to make sure nobody else got the lock first
+                client = self._clients.get(name)
+                if client is None:
+                    from metlog.client import MetlogClient
+                    client = MetlogClient(logger=name)
+                    if (not self._clients
+                        and not self.global_config.get('default')):
+                        # first one, set as default
+                        self.global_config['default'] = name
+                    self._clients[name] = client
+        return client
+
+    def set_client(self, name, client):
+        """
+        Provides a way to add a pre-existing MetlogClient to the ones stored
+        in the holder.
+        """
+        with self.lock:
+            self._clients[name] = client
+            if len(self._clients) == 1:
+                # first one, set as default
+                self.global_config['default'] = name
+
+    def set_default_client_name(self, name):
+        """
+        Convenience method for specifying what should be the default client.
+        """
+        self.global_config['default'] = name
+
+    @property
+    def default_client(self):
+        """
+        Return the default MetlogClient (as specified by the `default` value in
+        the global_config dict).
+        """
+        default_name = self.global_config.get('default')
+        if default_name is None:
+            return
+        return self.get_client(default_name)
+
+CLIENT_HOLDER = MetlogClientHolder()
 
 
 def _get_env_val(match_obj):
@@ -132,6 +194,7 @@ def client_from_dict_config(config, client=None):
     sender = sender_cls(*sender_args, **sender_config)
 
     if client is None:
+        from metlog.client import MetlogClient
         client = MetlogClient(sender, logger, severity, disabled_timers,
                               filters)
     else:
