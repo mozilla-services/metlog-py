@@ -177,6 +177,15 @@ class MetlogClient(object):
         self.filters = filters
         self._handler = MetlogHandler(self)
 
+    @property
+    def is_active(self):
+        """
+        Is this client ready to transmit messages? For now we assume that if
+        the default sender (i.e. `NoSendSender`) has been replaced then we're
+        good to go.
+        """
+        return not isinstance(self.sender, NoSendSender)
+
     def send_message(self, msg):
         """
         Apply any filters and, if required, pass message along to the sender
