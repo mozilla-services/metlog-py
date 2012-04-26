@@ -89,6 +89,28 @@ class MetlogClientHolder(object):
             return
         return self.get_client(default_name)
 
+    def delete_client(self, name, new_default=None):
+        """
+        Deletes the specified client from the set of stored clients.
+
+        :param name: Name of the client object to delete.
+        :param new_default: Name of different client to use as the default
+                            client.
+
+        *NOTE*: If the deleted client is the default and there is only one
+                other stored client, the remaining client will be set as
+                the new default regardless of whether or not it is specified
+                using the `new_client` argument.
+        """
+        if name in self._clients:
+            del self._clients[name]
+        if self.global_config['default'] == name:
+            if len(self._clients) == 1:
+                new_default = self._clients.keys()[0]
+        if new_default is not None:
+            self.set_default_client_name(new_default)
+
+
 CLIENT_HOLDER = MetlogClientHolder()
 
 
