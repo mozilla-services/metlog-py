@@ -25,7 +25,7 @@ import logging
 try:
     import simplejson as json
 except:
-    import json
+    import json  # NOQA
 
 
 class TestMetlogClient(object):
