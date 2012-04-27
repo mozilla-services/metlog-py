@@ -93,6 +93,9 @@ class MetlogClientHolder(object):
         if self.global_config['default'] == name:
             if len(self._clients) == 1:
                 new_default = self._clients.keys()[0]
+            else:
+                # we don't know what the new default should be :P
+                new_default = ''
         if new_default is not None:
             self.set_default_client_name(new_default)
 
