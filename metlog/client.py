@@ -18,7 +18,6 @@ import random
 import threading
 import time
 import types
-import logging
 
 from datetime import datetime
 from functools import wraps
@@ -175,7 +174,6 @@ class MetlogClient(object):
         if filters is None:
             filters = list()
         self.filters = filters
-        self._handler = MetlogHandler(self)
 
     @property
     def is_active(self):
@@ -309,38 +307,3 @@ class MetlogClient(object):
     def critical(self, msg):
         """ Log a CRITICAL level message """
         self.metlog(type='oldstyle', severity=SEVERITY.CRITICAL, payload=msg)
-
-    def _get_handler(self):
-        if self._handler is None:
-            self._handler = MetlogHandler(self)
-            self._handler.setLevel(logging.DEBUG)
-        return self._handler
-
-    def hook_logger(self, name):
-        """
-        Use this to hook metlog into the standard logging framework.
-
-        This is provided for backwards compatibility only.
-        """
-        logging.getLogger(name).addHandler(self._get_handler())
-
-
-class MetlogHandler(logging.Handler):
-    def __init__(self, metlog):
-        logging.Handler.__init__(self)
-        self.metlog = metlog
-
-    def emit(self, record):
-        if record.levelno == logging.DEBUG:
-            severity = SEVERITY.DEBUG
-        elif record.levelno == logging.INFO:
-            severity = SEVERITY.INFORMATIONAL
-        elif record.levelno == logging.WARNING:
-            severity = SEVERITY.WARNING
-        elif record.levelno == logging.ERROR:
-            severity = SEVERITY.ERROR
-        else:  # critical
-            severity = SEVERITY.CRITICAL
-
-        self.metlog.metlog(type='oldstyle', severity=severity,
-                payload=record.msg)
