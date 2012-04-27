@@ -161,7 +161,7 @@ class TestDisabledTimer(object):
         self.client._disabled_timers.add('test')
         with self.client.timer('test') as result:
             time.sleep(0.01)
-        assert result is None
+        ok_(result is None)
 
         # Now re-enable it
         self.client._disabled_timers.remove('test')
@@ -176,7 +176,6 @@ class TestDisabledTimer(object):
         eq_(full_msg['fields']['name'], name)
         eq_(full_msg['fields']['rate'], 1)
 
-
     def test_timer_decorator(self):
         name = 'test'
 
@@ -185,11 +184,11 @@ class TestDisabledTimer(object):
             time.sleep(0.01)
         foo()
 
-        assert len(self.client.sender.msgs) == 1
-        msg = json.loads(self.client.sender.msgs[0])
+        eq_(len(self.client.sender.msgs), 1)
 
         full_msg = self._extract_full_msg()
-        assert int(full_msg['payload']) >= 10, "Got: %d" % int(full_msg['payload'])
+        ok_(int(full_msg['payload']) >= 10,
+            "Got: %d" % int(full_msg['payload']))
         eq_(full_msg['type'], 'timer')
         eq_(full_msg['fields']['name'], name)
         eq_(full_msg['fields']['rate'], 1)
@@ -199,27 +198,26 @@ class TestDisabledTimer(object):
         self.client.sender.msgs.clear()
 
         @self.client.timer(name)
-        def foo():
+        def foo2():
             time.sleep(0.01)
-        foo()
+        foo2()
 
-        assert len(self.mock_sender.msgs) == 0
+        eq_(len(self.mock_sender.msgs), 0)
 
         # Now re-enable it
         self.client._disabled_timers.remove('test')
         self.client.sender.msgs.clear()
 
         @self.client.timer('test')
-        def foo():
+        def foo3():
             time.sleep(0.01)
-        foo()
+        foo3()
 
         full_msg = self._extract_full_msg()
-        assert int(full_msg['payload']) >= 10
+        ok_(int(full_msg['payload']) >= 10)
         eq_(full_msg['type'], 'timer')
         eq_(full_msg['fields']['name'], name)
         eq_(full_msg['fields']['rate'], 1)
-
 
     def test_disable_all_timers(self):
         name = 'test'
@@ -229,11 +227,10 @@ class TestDisabledTimer(object):
             time.sleep(0.01)
         foo()
 
-        assert len(self.client.sender.msgs) == 1
-        msg = json.loads(self.client.sender.msgs[0])
+        eq_(len(self.client.sender.msgs), 1)
 
         full_msg = self._extract_full_msg()
-        assert int(full_msg['payload']) >= 10
+        ok_(int(full_msg['payload']) >= 10)
         eq_(full_msg['type'], 'timer')
         eq_(full_msg['fields']['name'], name)
         eq_(full_msg['fields']['rate'], 1)
@@ -243,9 +240,9 @@ class TestDisabledTimer(object):
         self.client.sender.msgs.clear()
 
         @self.client.timer(name)
-        def foo():
+        def foo2():
             time.sleep(0.01)
-        foo()
+        foo2()
 
         assert len(self.mock_sender.msgs) == 0
 
