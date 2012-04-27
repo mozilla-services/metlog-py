@@ -12,10 +12,10 @@
 #   Rob Miller (rmiller@mozilla.com)
 #
 # ***** END LICENSE BLOCK *****
-from metlog.config import CLIENT_HOLDER
 from metlog.config import client_from_dict_config
 from metlog.decorators import incr_count
 from metlog.decorators import timeit
+from metlog.holder import CLIENT_HOLDER
 from nose.tools import eq_, raises
 
 try:

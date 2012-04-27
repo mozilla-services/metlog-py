@@ -23,8 +23,8 @@ one way (or not at all) when the decorator is originally evaluated, but then to
 be wrapped differently once the config has loaded and the desired final
 behavior has been established.
 """
-from metlog.config import CLIENT_HOLDER
 from metlog.decorators.util import return_fq_name
+from metlog.holder import CLIENT_HOLDER
 try:
     import json
 except:
