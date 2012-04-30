@@ -67,6 +67,34 @@ def _convert(value):
     return do_convert(value)
 
 
+def nest_prefixes(config_dict, prefixes=None, separator="_"):
+    """
+    Iterates through the `config_dict` keys, looking for any starting w/ one of
+    a specific set of prefixes, moving those into a single nested dictionary
+    keyed by the prefix value.
+
+    :param config_dict: Dictionary to mutate. Will also be returned.
+    :param prefixes: Sequence of prefixes to look for in `config_dict` keys.
+    :param separator: String which separates prefix values from the rest of the
+                      key.
+    """
+    if prefixes is None:
+        prefixes = ['sender', 'global']
+    for prefix in prefixes:
+        prefix_dict = {}
+        for key in config_dict.keys():
+            full_prefix = prefix + separator
+            if key.startswith(full_prefix):
+                nested_key = key[len(full_prefix):]
+                prefix_dict[nested_key] = config_dict[key]
+        if prefix_dict:
+            if prefix in config_dict:
+                config_dict[prefix].update(prefix_dict)
+            else:
+                config_dict[prefix] = prefix_dict
+    return config_dict
+
+
 def client_from_dict_config(config, client=None, clear_global=False):
     """
     Configure a metlog client, fully configured w/ sender and plugins.
@@ -115,12 +143,9 @@ def client_from_dict_config(config, client=None, clear_global=False):
       All remaining key-value pairs in the sender config dict will be passed as
       keyword arguments to the sender constructor.
     """
-    sender_config = config.get('sender', {})
-    for key, value in config.items():
-        if key.startswith('sender_'):
-            sender_config[key[len('sender_'):]] = value
-    config['sender'] = sender_config
+    config = nest_prefixes(config)
 
+    sender_config = config.get('sender', {})
     logger = config.get('logger', '')
     severity = config.get('severity', 6)
     disabled_timers = config.get('disabled_timers', [])
@@ -197,15 +222,8 @@ def dict_from_stream_config(stream, section):
     config = ConfigParser.SafeConfigParser()
     config.readfp(stream)
     client_dict = {}
-    global_dict = {}
-    global_token = 'global_'
     for opt in config.options(section):
-        value = _convert(config.get(section, opt))
-        if opt.startswith(global_token):
-            global_dict[opt[len(global_token):]] = value
-        else:
-            client_dict[opt] = value
-    client_dict['global'] = global_dict
+        client_dict[opt] = _convert(config.get(section, opt))
 
     filters = _get_filter_config(config, section)
     if filters:
@@ -227,8 +245,10 @@ def dict_from_stream_config(stream, section):
                 continue
             plugin_dict[opt] = _convert(config.get(plugin_section, opt))
         plugin_param[plugin_name] = plugin_dict
-    client_dict['plugins'] = plugin_param
+    if plugin_param:
+        client_dict['plugins'] = plugin_param
 
+    client_dict = nest_prefixes(client_dict)
     return client_dict
 
 
