@@ -67,13 +67,15 @@ def _convert(value):
     return do_convert(value)
 
 
-def client_from_dict_config(config, client=None):
+def client_from_dict_config(config, client=None, clear_global=False):
     """
     Configure a metlog client, fully configured w/ sender and plugins.
 
     :param config: Configuration dictionary.
     :param client: MetlogClient instance to configure. If None, one will be
                    created.
+    :param clear_global: If True, delete any existing global config on the
+                         CLIENT_HOLDER before applying new config.
 
     The configuration dict supports the following values:
 
@@ -89,6 +91,11 @@ def client_from_dict_config(config, client=None):
       to be passed in during each use of the filter.
     sender
       Nested dictionary containing sender configuration.
+    global
+      Dictionary to be applied to CLIENT_HOLDER's `global_config` storage.
+      New config will overwrite any conflicting values, but will not delete
+      other config entries. To delete, calling code should call the function
+      with `clear_global` set to True.
 
     All of the configuration values are optional, but failure to include a
     sender may result in a non-functional Metlog client. Any unrecognized keys
@@ -118,7 +125,13 @@ def client_from_dict_config(config, client=None):
     severity = config.get('severity', 6)
     disabled_timers = config.get('disabled_timers', [])
     plugin_param = config.pop('plugins', {})
+    global_conf = config.get('global', {})
     resolver = DottedNameResolver()
+
+    from metlog.holder import CLIENT_HOLDER
+    if clear_global:
+        CLIENT_HOLDER.global_config = {}
+    CLIENT_HOLDER.global_config.update(global_conf)
 
     filters = [(resolver.resolve(filter_dottedname), filter_config) for
                (filter_dottedname, filter_config) in config.get('filters', [])]
@@ -184,8 +197,15 @@ def dict_from_stream_config(stream, section):
     config = ConfigParser.SafeConfigParser()
     config.readfp(stream)
     client_dict = {}
+    global_dict = {}
+    global_token = 'global_'
     for opt in config.options(section):
-        client_dict[opt] = _convert(config.get(section, opt))
+        value = _convert(config.get(section, opt))
+        if opt.startswith(global_token):
+            global_dict[opt[len(global_token):]] = value
+        else:
+            client_dict[opt] = value
+    client_dict['global'] = global_dict
 
     filters = _get_filter_config(config, section)
     if filters:
@@ -212,7 +232,8 @@ def dict_from_stream_config(stream, section):
     return client_dict
 
 
-def client_from_stream_config(stream, section, client=None):
+def client_from_stream_config(stream, section, client=None,
+                              clear_global=False):
     """
     Extract configuration data in INI format from a stream object (e.g. a file
     object) and use it to generate a Metlog client. Config values will be sent
@@ -227,14 +248,15 @@ def client_from_stream_config(stream, section, client=None):
     Note that all sender config options should be prefaced by "sender_", e.g.
     "sender_class" should specify the dotted name of the sender class to use.
     Similarly all extension method settings should be prefaced by
-    "extensions_".
+    "extensions_". Any values prefaced by "global_" will be added to the global
+    config dictionary.
     """
     client_dict = dict_from_stream_config(stream, section)
     client = client_from_dict_config(client_dict, client)
     return client
 
 
-def client_from_text_config(text, section, client=None):
+def client_from_text_config(text, section, client=None, clear_global=False):
     """
     Extract configuration data in INI format from provided text and use it to
     configure a Metlog client. Text is converted to a stream and passed on to

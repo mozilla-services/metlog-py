@@ -93,6 +93,20 @@ def test_int_bool_conversions():
                                   false2=False, false3=False, false4=False)
 
 
+def test_global_config():
+    cfg_txt = """
+    [metlog]
+    sender_class = metlog.senders.DebugCaptureSender
+    global_foo = bar
+    global_multi = one
+                   two
+    """
+    client_from_text_config(cfg_txt, 'metlog')
+    from metlog.holder import CLIENT_HOLDER
+    expected = {'foo': 'bar', 'multi': ['one', 'two']}
+    eq_(expected, CLIENT_HOLDER.global_config)
+
+
 def test_filters_config():
     cfg_txt = """
     [metlog]
