@@ -9,10 +9,7 @@
 #
 # ***** END LICENSE BLOCK *****
 """
-This module provides helpers to handle configuration details as well
-as providing some late binding helper objects which can be used to
-hook into plugin systems.
-
+This module provides helpers to handle MetlogClient configuration details.
 """
 from metlog.client import MetlogClient
 from metlog.exceptions import EnvironmentNotFoundError
@@ -175,6 +172,46 @@ def _get_plugin_config(config, section, plugin):
     return plugins
 
 
+def dict_from_stream_config(stream, section):
+    """
+    Parses configuration from a stream and converts it to a dictionary suitable
+    for passing to `client_from_dict_config`.
+
+    :param stream: Stream object containing config information.
+    :param section: INI file section containing the configuration we care
+                    about.
+    """
+    config = ConfigParser.SafeConfigParser()
+    config.readfp(stream)
+    client_dict = {}
+    for opt in config.options(section):
+        client_dict[opt] = _convert(config.get(section, opt))
+
+    filters = _get_filter_config(config, section)
+    if filters:
+        client_dict['filters'] = filters
+
+    # Load any plugin configuration
+    plugin_sections = [n for n in config.sections()
+                       if n.startswith("%s_plugin" % section)]
+    resolver = DottedNameResolver()
+    plugin_param = {}
+    for plugin_section in plugin_sections:
+        plugin_name = plugin_section.replace("%s_plugin_" % section, '')
+        plugin_dict = {}
+        for opt in config.options(plugin_section):
+            if opt == 'provider':
+                configurator = resolver.resolve(config.get(plugin_section,
+                                                           opt))
+                plugin_dict['plugin.provider'] = configurator
+                continue
+            plugin_dict[opt] = _convert(config.get(plugin_section, opt))
+        plugin_param[plugin_name] = plugin_dict
+    client_dict['plugins'] = plugin_param
+
+    return client_dict
+
+
 def client_from_stream_config(stream, section, client=None):
     """
     Extract configuration data in INI format from a stream object (e.g. a file
@@ -192,39 +229,8 @@ def client_from_stream_config(stream, section, client=None):
     Similarly all extension method settings should be prefaced by
     "extensions_".
     """
-    config = ConfigParser.SafeConfigParser()
-    config.readfp(stream)
-    client_dict = {}
-    for opt in config.options(section):
-        client_dict[opt] = _convert(config.get(section, opt))
-
-    filters = _get_filter_config(config, section)
-
-    if filters:
-        client_dict['filters'] = filters
-
-    # Load any plugin configuration
-    plugin_sections = [n for n in config.sections()
-                       if n.startswith("%s_plugin" % section)]
-
-    resolver = DottedNameResolver()
-
-    plugin_param = {}
-    for plugin_section in plugin_sections:
-        plugin_name = plugin_section.replace("%s_plugin_" % section, '')
-        plugin_dict = {}
-        for opt in config.options(plugin_section):
-            if opt == 'provider':
-                configurator = resolver.resolve(config.get(plugin_section,
-                                                           opt))
-                plugin_dict['plugin.provider'] = configurator
-                continue
-            plugin_dict[opt] = _convert(config.get(plugin_section, opt))
-        plugin_param[plugin_name] = plugin_dict
-    client_dict['plugins'] = plugin_param
-
+    client_dict = dict_from_stream_config(stream, section)
     client = client_from_dict_config(client_dict, client)
-
     return client
 
 

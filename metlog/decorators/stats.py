@@ -12,7 +12,7 @@
 #   Rob Miller (rmiller@mozilla.com)
 #
 # ***** END LICENSE BLOCK *****
-from metlog.decorators.base import CLIENT_WRAPPER, MetlogDecorator
+from metlog.decorators.base import MetlogDecorator
 
 
 class timeit(MetlogDecorator):
@@ -20,7 +20,7 @@ class timeit(MetlogDecorator):
     Lazily decorate any callable with a metlog timer.
     """
     def predicate(self):
-        client = CLIENT_WRAPPER.client
+        client = self.client
         if (self._fn.__name__ in client._disabled_timers or
             '*' in client._disabled_timers):
             return False
@@ -31,7 +31,7 @@ class timeit(MetlogDecorator):
             self.args = tuple()
         if self.kwargs is None:
             self.kwargs = {'name': self._fn_fq_name}
-        with CLIENT_WRAPPER.client.timer(*self.args, **self.kwargs):
+        with self.client.timer(*self.args, **self.kwargs):
             return self._fn(*args, **kwargs)
 
 
@@ -48,5 +48,5 @@ class incr_count(MetlogDecorator):
         try:
             result = self._fn(*args, **kwargs)
         finally:
-            CLIENT_WRAPPER.client.incr(*self.args, **self.kwargs)
+            self.client.incr(*self.args, **self.kwargs)
         return result

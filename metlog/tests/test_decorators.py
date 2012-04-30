@@ -12,9 +12,10 @@
 #   Rob Miller (rmiller@mozilla.com)
 #
 # ***** END LICENSE BLOCK *****
-from metlog.decorators.base import CLIENT_WRAPPER
+from metlog.config import client_from_dict_config
 from metlog.decorators import incr_count
 from metlog.decorators import timeit
+from metlog.holder import CLIENT_HOLDER
 from nose.tools import eq_, raises
 
 try:
@@ -24,15 +25,20 @@ except:
 
 
 class DecoratorTestBase(object):
+    client_name = '_decorator_test'
+
     def setUp(self):
-        self.orig_client = CLIENT_WRAPPER.client
+        self.orig_default_client = CLIENT_HOLDER.global_config.get('default')
+        client = CLIENT_HOLDER.get_client(self.client_name)
         client_config = {
             'sender_class': 'metlog.senders.DebugCaptureSender',
             }
-        CLIENT_WRAPPER.activate(client_config)
+        self.client = client_from_dict_config(client_config, client)
+        CLIENT_HOLDER.set_default_client_name(self.client_name)
 
     def tearDown(self):
-        CLIENT_WRAPPER.client = self.orig_client
+        del CLIENT_HOLDER._clients[self.client_name]
+        CLIENT_HOLDER.set_default_client_name(self.orig_default_client)
 
 
 class TestCannedDecorators(DecoratorTestBase):
@@ -43,7 +49,7 @@ class TestCannedDecorators(DecoratorTestBase):
             return x + y
 
         ordering_1(5, 6)
-        msgs = [json.loads(m) for m in CLIENT_WRAPPER.client.sender.msgs]
+        msgs = [json.loads(m) for m in self.client.sender.msgs]
         eq_(len(msgs), 2)
 
         for msg in msgs:
@@ -55,7 +61,7 @@ class TestCannedDecorators(DecoratorTestBase):
         eq_(msgs[0]['type'], 'timer')
         eq_(msgs[1]['type'], 'counter')
 
-        CLIENT_WRAPPER.client.sender.msgs.clear()
+        self.client.sender.msgs.clear()
 
         @timeit
         @incr_count
@@ -63,7 +69,7 @@ class TestCannedDecorators(DecoratorTestBase):
             return x + y
 
         ordering_2(5, 6)
-        msgs = [json.loads(m) for m in CLIENT_WRAPPER.client.sender.msgs]
+        msgs = [json.loads(m) for m in self.client.sender.msgs]
         eq_(len(msgs), 2)
 
         for msg in msgs:
@@ -84,7 +90,7 @@ class TestDecoratorArgs(DecoratorTestBase):
             return x + y
 
         simple(5, 6)
-        msgs = [json.loads(m) for m in CLIENT_WRAPPER.client.sender.msgs]
+        msgs = [json.loads(m) for m in self.client.sender.msgs]
         eq_(len(msgs), 1)
 
         expected = {'severity': 2, 'timestamp': 0,
@@ -109,7 +115,7 @@ class TestDecoratorArgs(DecoratorTestBase):
             return x + y
 
         simple(5, 6)
-        msgs = [json.loads(m) for m in CLIENT_WRAPPER.client.sender.msgs]
+        msgs = [json.loads(m) for m in self.client.sender.msgs]
         eq_(len(msgs), 1)
 
         expected = {'severity': 5, 'timestamp': 8231,
@@ -131,17 +137,18 @@ class TestDecoratorArgs(DecoratorTestBase):
 
 class TestDisabledDecorators(DecoratorTestBase):
     def test_timeit_disabled(self):
-        orig_disabled = CLIENT_WRAPPER._disabled_decorators
-        CLIENT_WRAPPER._disabled_decorators = set(['timeit'])
+        global_config = CLIENT_HOLDER.global_config
+        orig_disabled = global_config.get('disabled_decorators')
+        global_config['disabled_decorators'] = set(['timeit'])
 
         @timeit
         def simple(x, y):
             return x + y
 
         simple(5, 6)
-        msgs = [json.loads(m) for m in CLIENT_WRAPPER.client.sender.msgs]
+        msgs = [json.loads(m) for m in self.client.sender.msgs]
         eq_(len(msgs), 0)
-        CLIENT_WRAPPER._disabled_decorators = orig_disabled
+        global_config['disabled_decorators'] = orig_disabled
 
     def test_specific_timer_disabled(self):
         @timeit
@@ -152,14 +159,11 @@ class TestDisabledDecorators(DecoratorTestBase):
         def simple2(x, y):
             return x + y
 
-        orig_disabled = CLIENT_WRAPPER.client._disabled_timers
         omit = ('metlog.tests.test_decorators.simple')
-        CLIENT_WRAPPER.client._disabled_timers = set([omit])
+        self.client._disabled_timers = set([omit])
 
         simple(1, 2)
         simple2(3, 4)
-        msgs = [json.loads(m) for m in CLIENT_WRAPPER.client.sender.msgs]
+        msgs = [json.loads(m) for m in self.client.sender.msgs]
         eq_(len(msgs), 1)
         eq_(msgs[0]['fields']['name'], 'metlog.tests.test_decorators.simple2')
-
-        CLIENT_WRAPPER.client._disabled_timers = orig_disabled

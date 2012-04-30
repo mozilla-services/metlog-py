@@ -11,6 +11,7 @@
 #   Rob Miller (rmiller@mozilla.com)
 #
 # ***** END LICENSE BLOCK *****
+from __future__ import absolute_import
 from datetime import datetime
 from metlog.client import MetlogClient
 from mock import Mock
@@ -19,12 +20,11 @@ from metlog.senders.dev import DebugCaptureSender
 
 import threading
 import time
-import logging
 
 try:
     import simplejson as json
 except:
-    import json
+    import json  # NOQA
 
 
 class TestMetlogClient(object):
@@ -160,7 +160,7 @@ class TestDisabledTimer(object):
         self.client._disabled_timers.add('test')
         with self.client.timer('test') as result:
             time.sleep(0.01)
-        assert result is None
+        ok_(result is None)
 
         # Now re-enable it
         self.client._disabled_timers.remove('test')
@@ -175,7 +175,6 @@ class TestDisabledTimer(object):
         eq_(full_msg['fields']['name'], name)
         eq_(full_msg['fields']['rate'], 1)
 
-
     def test_timer_decorator(self):
         name = 'test'
 
@@ -184,11 +183,11 @@ class TestDisabledTimer(object):
             time.sleep(0.01)
         foo()
 
-        assert len(self.client.sender.msgs) == 1
-        msg = json.loads(self.client.sender.msgs[0])
+        eq_(len(self.client.sender.msgs), 1)
 
         full_msg = self._extract_full_msg()
-        assert int(full_msg['payload']) >= 10, "Got: %d" % int(full_msg['payload'])
+        ok_(int(full_msg['payload']) >= 10,
+            "Got: %d" % int(full_msg['payload']))
         eq_(full_msg['type'], 'timer')
         eq_(full_msg['fields']['name'], name)
         eq_(full_msg['fields']['rate'], 1)
@@ -198,27 +197,26 @@ class TestDisabledTimer(object):
         self.client.sender.msgs.clear()
 
         @self.client.timer(name)
-        def foo():
+        def foo2():
             time.sleep(0.01)
-        foo()
+        foo2()
 
-        assert len(self.mock_sender.msgs) == 0
+        eq_(len(self.mock_sender.msgs), 0)
 
         # Now re-enable it
         self.client._disabled_timers.remove('test')
         self.client.sender.msgs.clear()
 
         @self.client.timer('test')
-        def foo():
+        def foo3():
             time.sleep(0.01)
-        foo()
+        foo3()
 
         full_msg = self._extract_full_msg()
-        assert int(full_msg['payload']) >= 10
+        ok_(int(full_msg['payload']) >= 10)
         eq_(full_msg['type'], 'timer')
         eq_(full_msg['fields']['name'], name)
         eq_(full_msg['fields']['rate'], 1)
-
 
     def test_disable_all_timers(self):
         name = 'test'
@@ -228,11 +226,10 @@ class TestDisabledTimer(object):
             time.sleep(0.01)
         foo()
 
-        assert len(self.client.sender.msgs) == 1
-        msg = json.loads(self.client.sender.msgs[0])
+        eq_(len(self.client.sender.msgs), 1)
 
         full_msg = self._extract_full_msg()
-        assert int(full_msg['payload']) >= 10
+        ok_(int(full_msg['payload']) >= 10)
         eq_(full_msg['type'], 'timer')
         eq_(full_msg['fields']['name'], name)
         eq_(full_msg['fields']['rate'], 1)
@@ -242,29 +239,8 @@ class TestDisabledTimer(object):
         self.client.sender.msgs.clear()
 
         @self.client.timer(name)
-        def foo():
+        def foo2():
             time.sleep(0.01)
-        foo()
+        foo2()
 
         assert len(self.mock_sender.msgs) == 0
-
-class TestLoggingHook(object):
-    logger = 'tests'
-
-    def setUp(self):
-        self.mock_sender = Mock()
-        self.client = MetlogClient(self.mock_sender, self.logger)
-        # overwrite the class-wide threadlocal w/ an instance one
-        # so values won't persist btn tests
-        self.client.timer._local = threading.local()
-
-    def tearDown(self):
-        del self.mock_sender
-
-    def test_logging_handler(self):
-        logger = logging.getLogger('demo')
-        self.client.hook_logger('demo')
-        msg = "this is an info message"
-        logger.info(msg)
-        assert msg == self.mock_sender.send_message.call_args[0][0]['payload']
-
