@@ -1,6 +1,12 @@
 0.8.5 - ????-??-??
 ==================
 
+- Replaced `metlog.decorators.base.MetlogClientWrapper` with
+  `metlog.holder.MetlogClientHolder` which is a bit more useful and a bit more
+  sane.
+- Moved Python stdlib `logging` compatibility hooks into its own module.
+- Updated config parsing to support global values stored in the CLIENT_HOLDER.
+
 0.8.4 - 2012-04-18
 ==================
 

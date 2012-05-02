@@ -67,13 +67,43 @@ def _convert(value):
     return do_convert(value)
 
 
-def client_from_dict_config(config, client=None):
+def nest_prefixes(config_dict, prefixes=None, separator="_"):
+    """
+    Iterates through the `config_dict` keys, looking for any starting w/ one of
+    a specific set of prefixes, moving those into a single nested dictionary
+    keyed by the prefix value.
+
+    :param config_dict: Dictionary to mutate. Will also be returned.
+    :param prefixes: Sequence of prefixes to look for in `config_dict` keys.
+    :param separator: String which separates prefix values from the rest of the
+                      key.
+    """
+    if prefixes is None:
+        prefixes = ['sender', 'global']
+    for prefix in prefixes:
+        prefix_dict = {}
+        for key in config_dict.keys():
+            full_prefix = prefix + separator
+            if key.startswith(full_prefix):
+                nested_key = key[len(full_prefix):]
+                prefix_dict[nested_key] = config_dict[key]
+        if prefix_dict:
+            if prefix in config_dict:
+                config_dict[prefix].update(prefix_dict)
+            else:
+                config_dict[prefix] = prefix_dict
+    return config_dict
+
+
+def client_from_dict_config(config, client=None, clear_global=False):
     """
     Configure a metlog client, fully configured w/ sender and plugins.
 
     :param config: Configuration dictionary.
     :param client: MetlogClient instance to configure. If None, one will be
                    created.
+    :param clear_global: If True, delete any existing global config on the
+                         CLIENT_HOLDER before applying new config.
 
     The configuration dict supports the following values:
 
@@ -89,6 +119,11 @@ def client_from_dict_config(config, client=None):
       to be passed in during each use of the filter.
     sender
       Nested dictionary containing sender configuration.
+    global
+      Dictionary to be applied to CLIENT_HOLDER's `global_config` storage.
+      New config will overwrite any conflicting values, but will not delete
+      other config entries. To delete, calling code should call the function
+      with `clear_global` set to True.
 
     All of the configuration values are optional, but failure to include a
     sender may result in a non-functional Metlog client. Any unrecognized keys
@@ -108,17 +143,20 @@ def client_from_dict_config(config, client=None):
       All remaining key-value pairs in the sender config dict will be passed as
       keyword arguments to the sender constructor.
     """
-    sender_config = config.get('sender', {})
-    for key, value in config.items():
-        if key.startswith('sender_'):
-            sender_config[key[len('sender_'):]] = value
-    config['sender'] = sender_config
+    config = nest_prefixes(config)
 
+    sender_config = config.get('sender', {})
     logger = config.get('logger', '')
     severity = config.get('severity', 6)
     disabled_timers = config.get('disabled_timers', [])
     plugin_param = config.pop('plugins', {})
+    global_conf = config.get('global', {})
     resolver = DottedNameResolver()
+
+    from metlog.holder import CLIENT_HOLDER
+    if clear_global:
+        CLIENT_HOLDER.global_config = {}
+    CLIENT_HOLDER.global_config.update(global_conf)
 
     filters = [(resolver.resolve(filter_dottedname), filter_config) for
                (filter_dottedname, filter_config) in config.get('filters', [])]
@@ -207,12 +245,15 @@ def dict_from_stream_config(stream, section):
                 continue
             plugin_dict[opt] = _convert(config.get(plugin_section, opt))
         plugin_param[plugin_name] = plugin_dict
-    client_dict['plugins'] = plugin_param
+    if plugin_param:
+        client_dict['plugins'] = plugin_param
 
+    client_dict = nest_prefixes(client_dict)
     return client_dict
 
 
-def client_from_stream_config(stream, section, client=None):
+def client_from_stream_config(stream, section, client=None,
+                              clear_global=False):
     """
     Extract configuration data in INI format from a stream object (e.g. a file
     object) and use it to generate a Metlog client. Config values will be sent
@@ -227,14 +268,15 @@ def client_from_stream_config(stream, section, client=None):
     Note that all sender config options should be prefaced by "sender_", e.g.
     "sender_class" should specify the dotted name of the sender class to use.
     Similarly all extension method settings should be prefaced by
-    "extensions_".
+    "extensions_". Any values prefaced by "global_" will be added to the global
+    config dictionary.
     """
     client_dict = dict_from_stream_config(stream, section)
     client = client_from_dict_config(client_dict, client)
     return client
 
 
-def client_from_text_config(text, section, client=None):
+def client_from_text_config(text, section, client=None, clear_global=False):
     """
     Extract configuration data in INI format from provided text and use it to
     configure a Metlog client. Text is converted to a stream and passed on to
