@@ -32,6 +32,7 @@ this::
   sender_class = metlog.senders.zmq.ZmqPubSender
   sender_bindstrs = tcp://127.0.0.1:5565
   sender_queue_length = 5000
+  global_disabled_decorators = incr_count
 
 Of all of these settings, only `sender_class` is strictly required. A detailed
 description of each option follows:
@@ -82,6 +83,11 @@ sender_*
   where the argument name is the option name minus the `sender_` component and
   the value is the specified value. In the example above, the ZeroMQ bind
   string and the queue length will be passed to the ZmqPubSender constructor.
+
+global_*
+  Any configuration value prefaced with `global_` represents an option that is
+  global to all Metlog clients process-wide and not just the client being
+  configured presently.
 
 In addition to the main `metlog` section, any other config sections that start
 with `metlog_` (or whatever section name is specified) will be considered to be
