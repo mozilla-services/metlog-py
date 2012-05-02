@@ -118,34 +118,31 @@ of type "timer" and "oldstyle" will be delivered.
 plugins
 =======
 
-Metlog allows you to bind new extensions onto the client through a
-plugin mechanism.
+Metlog allows you to bind new extensions onto the client through a plugin
+mechanism.
 
-Each plugin must have a configuration section name with a prefix of 
-`metlog_plugin_`.  Configuration is parsed into a dictionary, passed
-into a configurator and then the resulting plugin method is bound 
-to the client.
+Each plugin must have a configuration section name with a prefix of
+`metlog_plugin_`.  Configuration is parsed into a dictionary, passed into a
+configurator and then the resulting plugin method is bound to the client.
 
-Each configuration section for a plugin must contain at least one
-option with the name `provider`. This is a dotted name for a function
-which will be used to configure a plugin.  The return value for the
-provider is a configured method which will then be bound into the
-Metlog client.
+Each configuration section for a plugin must contain at least one option with
+the name `provider`. This is a dotted name for a function which will be used to
+configure a plugin.  The return value for the provider is a configured method
+which will then be bound into the Metlog client.
 
-Each plugin extension method is bound in with the suffix that follows
-the `metlog_plugin_` prefix in the configuration section name.
+Each plugin extension method is bound in with the suffix that follows the
+`metlog_plugin_` prefix in the configuration section name.
 
-An example best demonstrates what can be expected.  To load the dummy
-plugin, you need a `metlog_plugin_dummy` section as well as some
-configuration parameters. Here's an example ::
+An example best demonstrates what can be expected.  To load the dummy plugin,
+you need a `metlog_plugin_dummy` section as well as some configuration
+parameters. Here's an example ::
 
     [metlog_plugin_dummy]
     provider=metlog.tests.plugin:config_plugin
     port=8080
     host=localhost
 
-Once you obtain a reference to a client, you can access the new
-method. ::
+Once you obtain a reference to a client, you can access the new method. ::
 
     from metlog.decorators.base import CLIENT_WRAPPER
     client = CLIENT_WRAPPER.client
@@ -179,10 +176,10 @@ be converted to the following dictionary::
                ],
    }
 
-To manually load a Metlog client with plugins, the
-`client_from_dict_config` function allows you to pass in a plugin_parm
-argument.  The configuration specified in the "plugins" section above
-would be converted into the following dictionary ::
+To manually load a Metlog client with plugins, the `client_from_dict_config`
+function allows you to pass in a plugin_parm argument.  The configuration
+specified in the "plugins" section above would be converted into the following
+dictionary ::
 
     {'dummy': {'plugin.provider': 'metlog.tests.plugin:config_plugin',
                'port': 8080,
