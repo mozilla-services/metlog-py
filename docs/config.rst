@@ -167,6 +167,8 @@ be converted to the following dictionary::
               'bindstrs': 'tcp://127.0.0.1:5565',
               'queue_length': 5000,
               },
+   'global': {'disabled_decorators': ['incr_count'],
+              },
    'filters': [('metlog.filters.severity_max',
                 {'severity': 4},
                 ),
