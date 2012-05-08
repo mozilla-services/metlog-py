@@ -1,4 +1,4 @@
-0.8.5 - ????-??-??
+0.8.5 - 2012-05-07
 ==================
 
 - Replaced `metlog.decorators.base.MetlogClientWrapper` with
@@ -6,6 +6,14 @@
   sane.
 - Moved Python stdlib `logging` compatibility hooks into its own module.
 - Updated config parsing to support global values stored in the CLIENT_HOLDER.
+- Added `is_active` property to `MetlogClient`.
+- Heavily revised "Getting Started" documentation.
+- Added `dict_from_stream_config` function to `config`.
+- Extracted `StreamSender` from `StdOutServer`, added support for arbitrary
+  formatters for the output.
+- Added `ZmqHandshakePubSender` which communicates w/ clients via a control
+  channel.
+- ZMQ senders now use connection pooling.
 
 0.8.4 - 2012-04-18
 ==================
