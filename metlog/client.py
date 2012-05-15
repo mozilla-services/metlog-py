@@ -14,7 +14,9 @@
 #
 # ***** END LICENSE BLOCK *****
 from __future__ import absolute_import
+import os
 import random
+import socket
 import threading
 import time
 import types
@@ -140,6 +142,9 @@ class MetlogClient(object):
         """
         :param sender: A sender object used for actual message delivery.
         :param logger: Default `logger` value for all sent messages.
+                       This should be your application name and should
+                       not be modified for different instances of
+                       metlog within your the scope of your app.
         :param severity: Default `severity` value for all sent messages.
         :param disabled_timers: Sequence of string tokens identifying timers
                                 that should be deactivated.
@@ -166,6 +171,10 @@ class MetlogClient(object):
         self.sender = sender
         self.logger = logger
         self.severity = severity
+
+        self.hostname = socket.gethostname()
+        self.pid = os.getpid()
+
         self._dynamic_methods = {}
         if disabled_timers is None:
             self._disabled_timers = set()
@@ -241,6 +250,13 @@ class MetlogClient(object):
         logger = logger if logger is not None else self.logger
         severity = severity if severity is not None else self.severity
         fields = fields if fields is not None else dict()
+
+        # Populate the pid and hostname into the fields dictionary
+        # with a metlog_ prefix so that we don't clobber any other
+        # data
+        fields['metlog_pid'] = self.pid
+        fields['metlog_hostname'] = self.hostname
+
         if hasattr(timestamp, 'isoformat'):
             timestamp = timestamp.isoformat()
         full_msg = dict(type=type, timestamp=timestamp, logger=logger,
@@ -264,7 +280,6 @@ class MetlogClient(object):
         self.metlog('timer', timer.timestamp, timer.logger, timer.severity,
                     payload, fields)
 
-    # TODO: push this down into an extension
     def incr(self, name, count=1, timestamp=None, logger=None, severity=None,
              fields=None):
         """

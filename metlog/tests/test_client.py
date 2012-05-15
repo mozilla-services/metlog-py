@@ -18,6 +18,8 @@ from mock import Mock
 from nose.tools import eq_, ok_
 from metlog.senders.dev import DebugCaptureSender
 
+import socket
+import os
 import threading
 import time
 
@@ -57,7 +59,8 @@ class TestMetlogClient(object):
         eq_(full_msg['type'], msgtype)
         eq_(full_msg['severity'], self.client.severity)
         eq_(full_msg['logger'], self.logger)
-        eq_(full_msg['fields'], dict())
+        eq_(full_msg['fields'], {'metlog_pid': os.getpid(),
+            'metlog_hostname': socket.gethostname()})
         eq_(full_msg['env_version'], self.client.env_version)
 
     def test_metlog_full(self):
