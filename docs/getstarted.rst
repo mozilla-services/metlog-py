@@ -150,5 +150,5 @@ pass a config dict to the `get_client` function. This is a minimal working
 configuration that will cause all Metlog output to be sent to stdout::
 
     from metlog.holder import get_client
-    metlog_config = {'sender': 'metlog.senders.dev.StdOutSender'}
+    metlog_config = {'sender': {'class': 'metlog.senders.dev.StdOutSender'}}
     metlogger = get_client('myapp', metlog_config)
