@@ -137,7 +137,7 @@ class MetlogClient(object):
     """
     env_version = '0.8'
 
-    def __init__(self, sender=None, logger='', severity=6,
+    def __init__(self, sender, logger, severity=6,
                  disabled_timers=None, filters=None):
         """
         :param sender: A sender object used for actual message delivery.

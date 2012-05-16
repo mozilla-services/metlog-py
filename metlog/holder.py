@@ -39,7 +39,9 @@ class MetlogClientHolder(object):
                 # check again to make sure nobody else got the lock first
                 client = self._clients.get(name)
                 if client is None:
-                    client = MetlogClient(logger=name)
+                    # TODO: there is no sender set here - grab one
+                    # based on the globalconfig
+                    client = MetlogClient(sender=None, logger=name)
                     if (not self._clients
                         and not self.global_config.get('default')):
                         # first one, set as default
