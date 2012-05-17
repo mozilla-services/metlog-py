@@ -203,15 +203,17 @@ class MetlogClient(object):
                 return
         self.sender.send_message(msg)
 
-    def add_method(self, name, method):
+    def add_method(self, name, method, override):
         """
         Add a custom method to the MetlogClient instance.
 
         :param name: Name to use for the method.
         :param method: Callable that will be used as the method.
+        :param override: Set this to True if you really want to
+                         override an existing method.
         """
         assert isinstance(method, types.FunctionType)
-        if hasattr(self, name):
+        if not override and hasattr(self, name):
             msg = "The name [%s] is already in use" % name
             raise SyntaxError(msg)
         self._dynamic_methods[name] = method
