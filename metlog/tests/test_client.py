@@ -59,8 +59,8 @@ class TestMetlogClient(object):
         eq_(full_msg['type'], msgtype)
         eq_(full_msg['severity'], self.client.severity)
         eq_(full_msg['logger'], self.logger)
-        eq_(full_msg['fields'], {'metlog_pid': os.getpid(),
-            'metlog_hostname': socket.gethostname()})
+        eq_(full_msg['metlog_pid'], os.getpid())
+        eq_(full_msg['metlog_hostname'], socket.gethostname())
         eq_(full_msg['env_version'], self.client.env_version)
 
     def test_metlog_full(self):
@@ -72,11 +72,13 @@ class TestMetlogClient(object):
                                    'boo': 'far'})
         msgtype = 'bawlp'
         self.client.metlog(msgtype, **metlog_args)
-        full_msg = self._extract_full_msg()
+        actual_msg = self._extract_full_msg()
         metlog_args.update({'type': msgtype,
                             'env_version': self.client.env_version,
+                            'metlog_pid': os.getpid(),
+                            'metlog_hostname': socket.gethostname(),
                             'timestamp': metlog_args['timestamp'].isoformat()})
-        eq_(full_msg, metlog_args)
+        eq_(actual_msg, metlog_args)
 
     def test_timer_contextmanager(self):
         name = 'test'

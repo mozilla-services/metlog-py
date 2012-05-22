@@ -142,9 +142,10 @@ class MetlogClient(object):
         """
         :param sender: A sender object used for actual message delivery.
         :param logger: Default `logger` value for all sent messages.
-                       This should be your application name and should
-                       not be modified for different instances of
-                       metlog within your the scope of your app.
+                       This is commonly set to be the name of the
+                       current application and is not modified for
+                       different instances of metlog within the
+                       scope of the same application.
         :param severity: Default `severity` value for all sent messages.
         :param disabled_timers: Sequence of string tokens identifying timers
                                 that should be deactivated.
@@ -203,7 +204,7 @@ class MetlogClient(object):
                 return
         self.sender.send_message(msg)
 
-    def add_method(self, name, method, override):
+    def add_method(self, name, method, override=False):
         """
         Add a custom method to the MetlogClient instance.
 
@@ -253,17 +254,13 @@ class MetlogClient(object):
         severity = severity if severity is not None else self.severity
         fields = fields if fields is not None else dict()
 
-        # Populate the pid and hostname into the fields dictionary
-        # with a metlog_ prefix so that we don't clobber any other
-        # data
-        fields['metlog_pid'] = self.pid
-        fields['metlog_hostname'] = self.hostname
-
         if hasattr(timestamp, 'isoformat'):
             timestamp = timestamp.isoformat()
         full_msg = dict(type=type, timestamp=timestamp, logger=logger,
                         severity=severity, payload=payload, fields=fields,
-                        env_version=self.env_version)
+                        env_version=self.env_version,
+                        metlog_pid=self.pid,
+                        metlog_hostname=self.hostname)
         self.send_message(full_msg)
 
     def timing(self, timer, elapsed):
