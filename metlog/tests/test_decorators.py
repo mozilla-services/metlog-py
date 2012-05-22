@@ -98,11 +98,11 @@ class TestDecoratorArgs(DecoratorTestBase):
 
         expected = {'severity': 2, 'timestamp': 0,
                     'fields': {'name': 'qdo.foo',
-                        'metlog_hostname': socket.gethostname(),
-                        'metlog_pid': os.getpid(),
                         },
                     'logger': 'somelogger', 'type': 'counter',
                     'payload': '5', 'env_version': '0.8',
+                    'metlog_hostname': socket.gethostname(),
+                    'metlog_pid': os.getpid(),
                     }
         eq_(msgs[0], expected)
 
@@ -128,11 +128,11 @@ class TestDecoratorArgs(DecoratorTestBase):
         expected = {'severity': 5, 'timestamp': 8231,
                     'fields': {'anumber': 42, 'rate': 7,
                                'name': 'qdo.timeit', 'atext': 'foo',
-                               'metlog_hostname': socket.gethostname(),
-                               'metlog_pid': os.getpid(),
                                },
                     'logger': 'timeit_logger', 'type': 'timer',
                     'payload': '0', 'env_version': '0.8',
+                    'metlog_hostname': socket.gethostname(),
+                    'metlog_pid': os.getpid(),
                     }
         eq_(msgs[0], expected)
 

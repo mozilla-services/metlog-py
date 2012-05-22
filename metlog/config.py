@@ -174,9 +174,11 @@ def client_from_dict_config(config, client=None, clear_global=False):
 
     # Load plugins and pass in config
     for plugin_name, plugin_config in plugin_param.items():
-        config = plugin_config.pop('plugin.provider')
-        plugin = config(plugin_param[plugin_name])
-        client.add_method(plugin_name, plugin)
+        plugin_provider = plugin_config.pop('plugin.provider')
+        plugin_override = plugin_config.pop('override', False)
+
+        plugin = plugin_provider(plugin_param[plugin_name])
+        client.add_method(plugin_name, plugin, plugin_override)
 
     return client
 
