@@ -280,7 +280,7 @@ class MetlogClient(object):
                     payload, fields)
 
     def incr(self, name, count=1, timestamp=None, logger=None, severity=None,
-             fields=None):
+             fields=None, rate=1.0):
         """
         Sends an 'increment counter' message.
 
@@ -294,6 +294,7 @@ class MetlogClient(object):
         payload = str(count)
         fields = fields if fields is not None else dict()
         fields['name'] = name
+        fields['rate'] = rate
         self.metlog('counter', timestamp, logger, severity, payload, fields)
 
     # Standard Python logging API emulation
