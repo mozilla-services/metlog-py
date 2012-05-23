@@ -145,8 +145,8 @@ parameters. Here's an example ::
 
 Once you obtain a reference to a client, you can access the new method. ::
 
-    from metlog.decorators.base import CLIENT_WRAPPER
-    client = CLIENT_WRAPPER.client
+    from metlog.holder import CLIENT_HOLDER
+    client = CLIENT_HOLDER.get_client('your_app_name')
     client.dummy('some', 'ignored', 'arguments', 42)
 
 

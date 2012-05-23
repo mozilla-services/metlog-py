@@ -189,8 +189,10 @@ def client_from_dict_config(config, client=None, clear_global=False):
     # initialize plugins and attach to client
     for plugin_name, plugin_spec in plugins_data.items():
         # each plugin spec is a 2-tuple: (dotted_name, cfg)
-        plugin_fn = resolver.resolve(plugin_spec[0])(plugin_spec[1])
-        client.add_method(plugin_name, plugin_fn)
+        plugin_config = plugin_spec[1]
+        plugin_override = plugin_config.pop('override', False)
+        plugin_fn = resolver.resolve(plugin_spec[0])(plugin_config)
+        client.add_method(plugin_name, plugin_fn, plugin_override)
 
     return client
 

@@ -14,7 +14,9 @@
 #
 # ***** END LICENSE BLOCK *****
 from __future__ import absolute_import
+import os
 import random
+import socket
 import threading
 import time
 import types
@@ -135,11 +137,15 @@ class MetlogClient(object):
     """
     env_version = '0.8'
 
-    def __init__(self, sender=None, logger='', severity=6,
+    def __init__(self, sender, logger, severity=6,
                  disabled_timers=None, filters=None):
         """
         :param sender: A sender object used for actual message delivery.
         :param logger: Default `logger` value for all sent messages.
+                       This is commonly set to be the name of the
+                       current application and is not modified for
+                       different instances of metlog within the
+                       scope of the same application.
         :param severity: Default `severity` value for all sent messages.
         :param disabled_timers: Sequence of string tokens identifying timers
                                 that should be deactivated.
@@ -162,6 +168,10 @@ class MetlogClient(object):
         self.sender = sender
         self.logger = logger
         self.severity = severity
+
+        self.hostname = socket.gethostname()
+        self.pid = os.getpid()
+
         self._dynamic_methods = {}
         if disabled_timers is None:
             self._disabled_timers = set()
@@ -190,15 +200,17 @@ class MetlogClient(object):
                 return
         self.sender.send_message(msg)
 
-    def add_method(self, name, method):
+    def add_method(self, name, method, override=False):
         """
         Add a custom method to the MetlogClient instance.
 
         :param name: Name to use for the method.
         :param method: Callable that will be used as the method.
+        :param override: Set this to True if you really want to
+                         override an existing method.
         """
         assert isinstance(method, types.FunctionType)
-        if hasattr(self, name):
+        if not override and hasattr(self, name):
             msg = "The name [%s] is already in use" % name
             raise SyntaxError(msg)
         self._dynamic_methods[name] = method
@@ -237,11 +249,14 @@ class MetlogClient(object):
         logger = logger if logger is not None else self.logger
         severity = severity if severity is not None else self.severity
         fields = fields if fields is not None else dict()
+
         if hasattr(timestamp, 'isoformat'):
             timestamp = timestamp.isoformat()
         full_msg = dict(type=type, timestamp=timestamp, logger=logger,
                         severity=severity, payload=payload, fields=fields,
-                        env_version=self.env_version)
+                        env_version=self.env_version,
+                        metlog_pid=self.pid,
+                        metlog_hostname=self.hostname)
         self.send_message(full_msg)
 
     def timing(self, timer, elapsed):
@@ -260,7 +275,6 @@ class MetlogClient(object):
         self.metlog('timer', timer.timestamp, timer.logger, timer.severity,
                     payload, fields)
 
-    # TODO: push this down into an extension
     def incr(self, name, count=1, timestamp=None, logger=None, severity=None,
              fields=None):
         """

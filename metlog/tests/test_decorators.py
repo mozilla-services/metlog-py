@@ -12,6 +12,9 @@
 #   Rob Miller (rmiller@mozilla.com)
 #
 # ***** END LICENSE BLOCK *****
+import socket
+import os
+
 from metlog.config import client_from_dict_config
 from metlog.decorators import incr_count
 from metlog.decorators import timeit
@@ -94,9 +97,13 @@ class TestDecoratorArgs(DecoratorTestBase):
         eq_(len(msgs), 1)
 
         expected = {'severity': 2, 'timestamp': 0,
-                    'fields': {'name': 'qdo.foo'},
+                    'fields': {'name': 'qdo.foo',
+                        },
                     'logger': 'somelogger', 'type': 'counter',
-                    'payload': '5', 'env_version': '0.8'}
+                    'payload': '5', 'env_version': '0.8',
+                    'metlog_hostname': socket.gethostname(),
+                    'metlog_pid': os.getpid(),
+                    }
         eq_(msgs[0], expected)
 
     @raises(TypeError)
@@ -120,9 +127,13 @@ class TestDecoratorArgs(DecoratorTestBase):
 
         expected = {'severity': 5, 'timestamp': 8231,
                     'fields': {'anumber': 42, 'rate': 7,
-                               'name': 'qdo.timeit', 'atext': 'foo'},
+                               'name': 'qdo.timeit', 'atext': 'foo',
+                               },
                     'logger': 'timeit_logger', 'type': 'timer',
-                    'payload': '0', 'env_version': '0.8'}
+                    'payload': '0', 'env_version': '0.8',
+                    'metlog_hostname': socket.gethostname(),
+                    'metlog_pid': os.getpid(),
+                    }
         eq_(msgs[0], expected)
 
     @raises(TypeError)
