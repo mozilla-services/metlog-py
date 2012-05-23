@@ -112,20 +112,30 @@ def test_filters_config():
     [metlog]
     sender_class = metlog.senders.DebugCaptureSender
     [metlog_filter_sev_max]
-    filter = metlog.filters.severity_max
+    provider = metlog.filters.severity_max_provider
     severity = 6
     [metlog_filter_type_whitelist]
-    filter = metlog.filters.type_whitelist
+    provider = metlog.filters.type_whitelist_provider
     types = foo
             bar
             baz
     """
     client = client_from_text_config(cfg_txt, 'metlog')
-    from metlog.filters import severity_max, type_whitelist
-    expected = [(severity_max, {'severity': 6}),
-                (type_whitelist, {'types': ['foo', 'bar', 'baz']}),
-                ]
-    eq_(client.filters, expected)
+    eq_(len(client.filters), 2)
+
+    severity_max = client.filters[0]
+    eq_(severity_max.func_name, 'severity_max')
+    msg = {'severity': 6}
+    ok_(severity_max(msg))
+    msg = {'severity': 7}
+    ok_(not severity_max(msg))
+
+    type_whitelist = client.filters[1]
+    eq_(type_whitelist.func_name, 'type_whitelist')
+    msg = {'type': 'bar'}
+    ok_(type_whitelist(msg))
+    msg = {'type': 'bawlp'}
+    ok_(not type_whitelist(msg))
 
 
 def test_plugins_config():

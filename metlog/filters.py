@@ -12,53 +12,68 @@
 #
 # ***** END LICENSE BLOCK *****
 """
-Callables useful as message filters for the MetlogClient. All filters
-should accept three arguments:
+Callables that provide message filters for the MetlogClient. Each provider
+accepts needed filter configuration values, and returns a filter function
+usable by a MetlogClient instance.
 
-:param client: MetlogClient instance
-:param config: Dictionary containing any necessary filter configuration
-               info
-:param msg: Message dictionary
-
-All filters should return a boolean value, True if a message *should* be
-delivered, False if a message *should not* be delivered. Note that the `msg`
-dictionary *may* be mutated by the filter.
+Each filter accepts a single `msg` dictionary argument and returns a boolean
+value: True if a message *should* be delivered, False if a message *should not*
+be delivered. Note that the `msg` dictionary *may* be mutated by the filter.
 """
 
 
-def severity_max(client, config, msg):
+def severity_max_provider(severity):
     """
-    Filter if message severity is greater than config's `severity` value.
+    Filter if message severity is greater than specified `severity`.
     """
-    if msg['severity'] > config['severity']:
-        return False
-    return True
+    def severity_max(msg):
+        if msg['severity'] > severity:
+            return False
+        return True
+
+    return severity_max
 
 
-def type_blacklist(client, config, msg):
+def type_blacklist_provider(types):
     """
-    Filter if message type is in the config's `types` value.
+    Filter if message type is in the `types` value.
     """
-    if msg['type'] in config['types']:
-        return False
-    return True
+    def type_blacklist(msg):
+        if msg['type'] in types:
+            return False
+        return True
+
+    return type_blacklist
 
 
-def type_whitelist(client, config, msg):
+def type_whitelist_provider(types):
     """
-    Filter if message type is NOT in the config's `types` value.
+    Filter if message type is NOT in the `types` value.
     """
-    if msg['type'] not in config['types']:
-        return False
-    return True
+    def type_whitelist(msg):
+        if msg['type'] not in types:
+            return False
+        return True
+
+    return type_whitelist
 
 
-def type_severity_max(client, config, msg):
+def type_severity_max_provider(types):
     """
     Filter if message type has specified maximum severity value and message
-    severity is higher than this maximum.
+    severity is higher than this maximum. Each keyword argument key should be a
+    message type name, and each keyword argument value should be the maximum
+    allowed severity for that message type.
     """
-    type_spec = config['types'].get(msg['type'])
-    if type_spec is None:
-        return True
-    return severity_max(client, type_spec, msg)
+    for msgtype in types:
+        severity_filter = severity_max_provider(**types[msgtype])
+        types[msgtype] = severity_filter
+
+    def type_severity_max(msg):
+        msgtype = msg['type']
+        if msgtype not in types:
+            return True
+        severity_filter = types[msgtype]
+        return severity_filter(msg)
+
+    return type_severity_max
