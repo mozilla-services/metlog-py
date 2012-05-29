@@ -149,9 +149,7 @@ class MetlogClient(object):
         :param severity: Default `severity` value for all sent messages.
         :param disabled_timers: Sequence of string tokens identifying timers
                                 that should be deactivated.
-        :param filters: A sequence of 2-tuples, each containing a filter
-                        callable and the config dict to pass in to the callable
-                        on each invocation.
+        :param filters: A sequence of filter callables.
         """
         self.setup(sender, logger, severity, disabled_timers, filters)
 
@@ -163,9 +161,7 @@ class MetlogClient(object):
         :param severity: Default `severity` value for all sent messages.
         :param disabled_timers: Sequence of string tokens identifying timers
                                 that should be deactivated.
-        :param filters: A sequence of 2-tuples, each containing a filter
-                        callable and the config dict to pass in to the callable
-                        on each invocation.
+        :param filters: A sequence of filter callables.
         """
         if sender is None:
             sender = NoSendSender()
@@ -199,8 +195,8 @@ class MetlogClient(object):
         Apply any filters and, if required, pass message along to the sender
         for delivery.
         """
-        for filter_fn, config in self.filters:
-            if not filter_fn(self, config, msg):
+        for filter_fn in self.filters:
+            if not filter_fn(msg):
                 return
         self.sender.send_message(msg)
 
