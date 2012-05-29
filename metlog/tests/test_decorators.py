@@ -98,6 +98,7 @@ class TestDecoratorArgs(DecoratorTestBase):
 
         expected = {'severity': 2, 'timestamp': 0,
                     'fields': {'name': 'qdo.foo',
+                        'rate': 1.0,
                         },
                     'logger': 'somelogger', 'type': 'counter',
                     'payload': '5', 'env_version': '0.8',
