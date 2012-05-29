@@ -96,23 +96,24 @@ supported, however. The first of these is configuration for MetlogClient
 :doc:`api/filters`. Here is an example of such a configuration::
 
   [metlog_filter_sev_max]
-  filter = metlog.filters.severity_max
+  provider = metlog.filters.severity_max_provider
   severity = 4
 
   [metlog_filter_type_whitelist]
-  filter = metlog.filters.type_whitelist
+  provider = metlog.filters.type_whitelist_provider
   types = timer
           oldstyle
 
-Each `metlog_filter_*` section must contain a `filter` entry, which is a dotted
-name specifying a filter function that will be added to the MetlogClient's
-filters. The rest of the options in that section will be converted into a
-config dictionary which will be passed in to each invocation of the filter
-function. The filters will be applied in the order they are specified. In this
-case a "severity max" filter will be applied, so that only messages with a
-severity of 4 (i.e. "warning") or lower will actually be passed in to the
-sender. Additionally a "type whitelist" will be applied, so that only messages
-of type "timer" and "oldstyle" will be delivered.
+Each `metlog_filter_*` section must contain a `provider` entry, which is a
+dotted name specifying a filter provider function. The rest of the options in
+that section will be converted into configuration parameters. The provider
+function will be called and passed the configuration parameters, returning a
+filter function that will be added to the client's filters. The filters will be
+applied in the order they are specified. In this case a "severity max" filter
+will be applied, so that only messages with a severity of 4 (i.e. "warning") or
+lower will actually be passed in to the sender. Additionally a "type whitelist"
+will be applied, so that only messages of type "timer" and "oldstyle" will be
+delivered.
 
 
 plugins
@@ -138,7 +139,7 @@ you need a `metlog_plugin_dummy` section as well as some configuration
 parameters. Here's an example ::
 
     [metlog_plugin_dummy]
-    provider=metlog.tests.plugin:config_plugin
+    provider=metlog.tests.plugin.config_plugin
     port=8080
     host=localhost
 
@@ -183,10 +184,10 @@ function allows you to pass in a plugin_parm argument.  The configuration
 specified in the "plugins" section above would be converted into the following
 dictionary ::
 
-    {'dummy': {'plugin.provider': 'metlog.tests.plugin:config_plugin',
-               'port': 8080,
-               'host': 'localhost'
-              }
+    {'dummy': ('metlog.tests.plugin:config_plugin',
+               {'port': 8080,
+                'host': 'localhost'
+                },
     }
 
 

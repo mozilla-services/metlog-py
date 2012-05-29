@@ -35,8 +35,8 @@ class TestMetlogClientFilters(object):
         del self.client
 
     def test_severity_max(self):
-        from metlog.filters import severity_max
-        self.client.filters = [(severity_max, {'severity': SEVERITY.ERROR})]
+        from metlog.filters import severity_max_provider
+        self.client.filters = [severity_max_provider(severity=SEVERITY.ERROR)]
         payload = 'foo'
         self.client.debug(payload)
         self.client.info(payload)
@@ -52,8 +52,9 @@ class TestMetlogClientFilters(object):
             ok_(msg['severity'] <= SEVERITY.ERROR)
 
     def test_type_blacklist(self):
-        from metlog.filters import type_blacklist
-        self.client.filters = [(type_blacklist, {'types': set(['foo'])})]
+        from metlog.filters import type_blacklist_provider
+        type_blacklist = type_blacklist_provider(types=set(['foo']))
+        self.client.filters = [type_blacklist]
         choices = ['foo', 'bar']
         notfoos = 0
         for i in range(10):
@@ -64,8 +65,9 @@ class TestMetlogClientFilters(object):
         eq_(len(self.sender.msgs), notfoos)
 
     def test_type_whitelist(self):
-        from metlog.filters import type_whitelist
-        self.client.filters = [(type_whitelist, {'types': set(['foo'])})]
+        from metlog.filters import type_whitelist_provider
+        type_whitelist = type_whitelist_provider(types=set(['foo']))
+        self.client.filters = [type_whitelist]
         choices = ['foo', 'bar']
         foos = 0
         for i in range(10):
@@ -76,12 +78,13 @@ class TestMetlogClientFilters(object):
         eq_(len(self.sender.msgs), foos)
 
     def test_type_severity_max(self):
-        from metlog.filters import type_severity_max
+        from metlog.filters import type_severity_max_provider
         config = {'types': {'foo': {'severity': 3},
                             'bar': {'severity': 5},
                             },
                   }
-        self.client.filters = [(type_severity_max, config)]
+        type_severity_max = type_severity_max_provider(**config)
+        self.client.filters = [type_severity_max]
         for msgtype in ['foo', 'bar']:
             for sev in range(8):
                 self.client.metlog(msgtype, severity=sev, payload='msg')
