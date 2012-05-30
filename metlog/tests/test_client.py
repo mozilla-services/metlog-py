@@ -124,10 +124,13 @@ class TestMetlogClient(object):
     def test_incr(self):
         name = 'incr'
         self.client.incr(name)
+
         full_msg = self._extract_full_msg()
         eq_(full_msg['type'], 'counter')
         eq_(full_msg['logger'], self.logger)
         eq_(full_msg['fields']['name'], name)
+        # You have to have a rate set here
+        eq_(full_msg['fields']['rate'], 1)
         eq_(full_msg['payload'], '1')
 
         self.client.incr(name, 10)
