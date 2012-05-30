@@ -288,6 +288,8 @@ class MetlogClient(object):
         :param severity: Numerical code (0-7) for msg severity, per RFC 5424.
         :param fields: Arbitrary key/value pairs for add'l metadata.
         """
+        if rate < 1 and random.random() >= rate:
+            return
         payload = str(count)
         fields = fields if fields is not None else dict()
         fields['name'] = name
