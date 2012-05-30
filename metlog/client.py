@@ -77,7 +77,7 @@ class _Timer(object):
         return False
 
     def __call__(self, name, timestamp=None, logger=None, severity=None,
-                 fields=None, rate=1):
+                 fields=None, rate=1.0):
         """
         Performs the actual initialization of the timer object. Note that the
         `name` parameter might be a callable when we are being used as a
