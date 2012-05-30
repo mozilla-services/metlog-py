@@ -75,7 +75,7 @@ class MetlogClientHolder(object):
         default_name = self.global_config.get('default')
         if default_name is None:
             return
-        return self.get_client(default_name)
+        return self._clients.get(default_name)
 
     def delete_client(self, name):
         """

@@ -76,9 +76,12 @@ class DebugCaptureSender(object):
     later. This is only for DEBUGGING.  Do not use this for anything except
     development.
     """
-    def __init__(self):
+    def __init__(self, **kwargs):
         import collections
         self.msgs = collections.deque(maxlen=100)
+        for k, v in kwargs.items():
+            # set arbitrary attributes, useful for testing
+            setattr(self, k, v)
 
     def send_message(self, msg):
         """JSONify and append to the circular buffer."""
