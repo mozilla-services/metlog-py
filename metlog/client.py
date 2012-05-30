@@ -57,7 +57,6 @@ class _Timer(object):
         self.__dict__['client'] = client
         # Have to do the same for the thread local itself, to avoid recursion
         self.__dict__['_local'] = threading.local()
-        random.seed()
 
     def __delattr__(self, attr):
         """Store thread-local data safely."""
@@ -152,6 +151,8 @@ class MetlogClient(object):
         :param filters: A sequence of filter callables.
         """
         self.setup(sender, logger, severity, disabled_timers, filters)
+        # seed random for rate calculations
+        random.seed()
 
     def setup(self, sender=None, logger='', severity=6, disabled_timers=None,
               filters=None):
