@@ -22,13 +22,11 @@ import threading
 
 class TestMetlogClientFilters(object):
     logger = 'tests'
+    timer_name = 'test'
 
     def setUp(self):
         self.sender = DebugCaptureSender()
         self.client = MetlogClient(self.sender, self.logger)
-        # overwrite the class-wide threadlocal w/ an instance one
-        # so values won't persist btn tests
-        self.client.timer._local = threading.local()
 
     def tearDown(self):
         del self.sender

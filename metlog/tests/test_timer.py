@@ -19,48 +19,46 @@ import threading
 import time
 
 
+timer_name = 'test'
+
+
 def _make_em():
     mock_client = Mock(spec=MetlogClient)
-    timer = _Timer(mock_client)
+    timer = _Timer(mock_client, timer_name, {})
     return mock_client, timer
 
 
-def test_enforce_name():
+def test_only_decorate_functions():
     mock_client, timer = _make_em()
 
-    def no_name_timer():
-        with timer:
-            time.sleep(0.01)
-    assert_raises(ValueError, no_name_timer)
-
-    def timed():
-        time.sleep(0.01)
-    assert_raises(ValueError, timer, timed)
+    def bad_timer_arg():
+        timer('foo')
+    assert_raises(ValueError, bad_timer_arg)
 
 
 def test_contextmanager():
     mock_client, timer = _make_em()
-    with timer('name') as result:
+    with timer as timer:
         time.sleep(0.01)
 
-    eq_(mock_client.timing.call_count, 1)
-    timing_args = mock_client.timing.call_args[0]
-    eq_(timing_args[0], timer)
+    eq_(mock_client.timer_send.call_count, 1)
+    timing_args = mock_client.timer_send.call_args[0]
+    eq_(timing_args[0], timer_name)
     ok_(timing_args[1] >= 10)
-    eq_(timing_args[1], result.ms)
+    eq_(timing_args[1], timer.result)
 
 
 def test_decorator():
     mock_client, timer = _make_em()
 
-    @timer('name')
+    @timer
     def timed():
         time.sleep(0.01)
 
     timed()
-    eq_(mock_client.timing.call_count, 1)
-    timing_args = mock_client.timing.call_args[0]
-    eq_(timing_args[0], timer)
+    eq_(mock_client.timer_send.call_count, 1)
+    timing_args = mock_client.timer_send.call_args[0]
+    eq_(timing_args[0], timer_name)
     ok_(timing_args[1] >= 10)
 
 

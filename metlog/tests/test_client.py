@@ -31,15 +31,18 @@ except:
 
 class TestMetlogClient(object):
     logger = 'tests'
+    timer_name = 'test'
 
     def setUp(self):
         self.mock_sender = Mock()
         self.client = MetlogClient(self.mock_sender, self.logger)
         # overwrite the class-wide threadlocal w/ an instance one
         # so values won't persist btn tests
-        self.client.timer._local = threading.local()
+        self.timer_ob = self.client.timer(self.timer_name)
+        self.timer_ob.__dict__['_local'] = threading.local()
 
     def tearDown(self):
+        del self.timer_ob.__dict__['_local']
         del self.mock_sender
 
     def _extract_full_msg(self):
@@ -81,21 +84,19 @@ class TestMetlogClient(object):
         eq_(actual_msg, metlog_args)
 
     def test_timer_contextmanager(self):
-        name = 'test'
-        with self.client.timer(name) as result:
+        name = self.timer_name
+        with self.client.timer(name) as timer:
             time.sleep(0.01)
 
-        ok_(result.ms >= 10)
+        ok_(timer.result >= 10)
         full_msg = self._extract_full_msg()
-        eq_(full_msg['payload'], str(result.ms))
+        eq_(full_msg['payload'], str(timer.result))
         eq_(full_msg['type'], 'timer')
         eq_(full_msg['fields']['name'], name)
         eq_(full_msg['fields']['rate'], 1)
 
     def test_timer_decorator(self):
-        name = 'test'
-
-        @self.client.timer(name)
+        @self.client.timer(self.timer_name)
         def timed():
             time.sleep(0.01)
 
@@ -104,11 +105,11 @@ class TestMetlogClient(object):
         full_msg = self._extract_full_msg()
         ok_(int(full_msg['payload']) >= 10)
         eq_(full_msg['type'], 'timer')
-        eq_(full_msg['fields']['name'], name)
+        eq_(full_msg['fields']['name'], self.timer_name)
         eq_(full_msg['fields']['rate'], 1)
 
     def test_timer_with_rate(self):
-        name = 'test'
+        name = self.timer_name
 
         @self.client.timer(name, rate=0.01)
         def timed():
@@ -140,6 +141,7 @@ class TestMetlogClient(object):
 
 class TestDisabledTimer(object):
     logger = 'tests'
+    timer_name = 'test'
 
     def _extract_full_msg(self):
         return json.loads(self.mock_sender.msgs[0])
@@ -149,42 +151,46 @@ class TestDisabledTimer(object):
         self.client = MetlogClient(self.mock_sender, self.logger)
         # overwrite the class-wide threadlocal w/ an instance one
         # so values won't persist btn tests
-        self.client.timer._local = threading.local()
+        self.timer_ob = self.client.timer(self.timer_name)
+        self.timer_ob.__dict__['_local'] = threading.local()
+
+    def tearDown(self):
         self.client.sender.msgs.clear()
+        del self.timer_ob.__dict__['_local']
 
     def test_timer_contextmanager(self):
-        name = 'test'
-        with self.client.timer(name) as result:
+        name = self.timer_name
+        with self.client.timer(name) as timer:
             time.sleep(0.01)
 
-        ok_(result.ms >= 10)
+        ok_(timer.result >= 10)
         full_msg = self._extract_full_msg()
-        eq_(full_msg['payload'], str(result.ms))
+        eq_(full_msg['payload'], str(timer.result))
         eq_(full_msg['type'], 'timer')
         eq_(full_msg['fields']['name'], name)
         eq_(full_msg['fields']['rate'], 1)
 
         # Now disable it
-        self.client._disabled_timers.add('test')
-        with self.client.timer('test') as result:
+        self.client._disabled_timers.add(name)
+        with self.client.timer(name) as timer:
             time.sleep(0.01)
-        ok_(result is None)
+            ok_(timer.result is None)
 
         # Now re-enable it
-        self.client._disabled_timers.remove('test')
+        self.client._disabled_timers.remove(name)
         self.client.sender.msgs.clear()
-        with self.client.timer('test') as result:
+        with self.client.timer(name) as timer:
             time.sleep(0.01)
 
-        ok_(result.ms >= 10)
+        ok_(timer.result >= 10)
         full_msg = self._extract_full_msg()
-        eq_(full_msg['payload'], str(result.ms))
+        eq_(full_msg['payload'], str(timer.result))
         eq_(full_msg['type'], 'timer')
         eq_(full_msg['fields']['name'], name)
         eq_(full_msg['fields']['rate'], 1)
 
     def test_timer_decorator(self):
-        name = 'test'
+        name = self.timer_name
 
         @self.client.timer(name)
         def foo():
@@ -201,7 +207,7 @@ class TestDisabledTimer(object):
         eq_(full_msg['fields']['rate'], 1)
 
         # Now disable it
-        self.client._disabled_timers.add('test')
+        self.client._disabled_timers.add(name)
         self.client.sender.msgs.clear()
 
         @self.client.timer(name)
@@ -212,10 +218,10 @@ class TestDisabledTimer(object):
         eq_(len(self.mock_sender.msgs), 0)
 
         # Now re-enable it
-        self.client._disabled_timers.remove('test')
+        self.client._disabled_timers.remove(name)
         self.client.sender.msgs.clear()
 
-        @self.client.timer('test')
+        @self.client.timer(name)
         def foo3():
             time.sleep(0.01)
         foo3()
@@ -227,7 +233,7 @@ class TestDisabledTimer(object):
         eq_(full_msg['fields']['rate'], 1)
 
     def test_disable_all_timers(self):
-        name = 'test'
+        name = self.timer_name
 
         @self.client.timer(name)
         def foo():
@@ -251,4 +257,4 @@ class TestDisabledTimer(object):
             time.sleep(0.01)
         foo2()
 
-        assert len(self.mock_sender.msgs) == 0
+        eq_(len(self.mock_sender.msgs), 0)

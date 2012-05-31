@@ -27,9 +27,6 @@ class TestLoggingHook(object):
     def setUp(self):
         self.mock_sender = Mock()
         self.client = MetlogClient(self.mock_sender, self.logger)
-        # overwrite the class-wide threadlocal w/ an instance one
-        # so values won't persist btn tests
-        self.client.timer._local = threading.local()
 
     def tearDown(self):
         del self.mock_sender

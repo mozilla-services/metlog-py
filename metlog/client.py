@@ -40,23 +40,35 @@ class SEVERITY:
     DEBUG = 7
 
 
-class _TimerResult(object):
-    def __init__(self, ms=None):
-        self.ms = ms
+class _NoOpTimer(object):
+    """
+    A bogus timer object that will act as a contextdecorator but which
+    doesn't actually do anything.
+    """
+    def __init__(self):
+        self.start = None
+        self.result = None
+
+    def __call__(self, fn):
+        return fn
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, typ, value, tb):
+        return False
 
 
 class _Timer(object):
     """A contextdecorator for timing."""
 
-    def __init__(self, client):
-        # We have to make sure the client is attached directly to __dict__
-        # because the __setattr__ below is so clever. Otherwise the client
-        # becomes a thread-local object even though the connection is for the
-        # whole process. This error was witnessed under mod_wsgi when using an
-        # ImportScript.
+    def __init__(self, client, name, msg_data):
+        # most attributes on a _Timer object should be threadlocal, except for
+        # a few which we put directly in the __dict__
         self.__dict__['client'] = client
-        # Have to do the same for the thread local itself, to avoid recursion
         self.__dict__['_local'] = threading.local()
+        self.__dict__['name'] = name
+        self.msg_data = msg_data
 
     def __delattr__(self, attr):
         """Store thread-local data safely."""
@@ -70,62 +82,30 @@ class _Timer(object):
         """Store thread-local data safely."""
         setattr(self._local, attr, value)
 
-    def disabled(self):
-        if hasattr(self.client, '_disabled_timers'):
-            return ('*' in self.client._disabled_timers
-                    or self.name in self.client._disabled_timers)
-        return False
-
-    def __call__(self, name, timestamp=None, logger=None, severity=None,
-                 fields=None, rate=1.0):
+    def __call__(self, fn):
         """
-        Performs the actual initialization of the timer object. Note that the
-        `name` parameter might be a callable when we are being used as a
-        decorator. If this is the case, the timer object must have already been
-        initialized or we have an error condition.
+        Support for use as a decorator.
         """
-        # As a decorator, 'name' may be a function.
-        if callable(name):
-            # check to make sure we've been through already to set the
-            # timer values
-            if not hasattr(self, 'name'):
-                raise ValueError('Timer instance must be called and provided '
-                                 'a `name` value')
+        if not callable(fn):
+            # whoops, can't decorate if we're not callable
+            raise ValueError('Timer objects can only wrap callable objects.')
 
-            @wraps(name)
-            def wrapped(*a, **kw):
-                with self:
-                    return name(*a, **kw)
-            return wrapped
-
-        self.name = name
-        self.timestamp = timestamp
-        self.logger = logger
-        self.severity = severity
-        self.fields = fields
-        self.rate = rate
-        return self
+        @wraps(fn)
+        def wrapped(*a, **kw):
+            with self:
+                return fn(*a, **kw)
+        return wrapped
 
     def __enter__(self):
-        if not hasattr(self, 'name'):
-            raise ValueError('Timer instance must be called and provided a '
-                             '`name` value')
-        if self.disabled():
-            return None
-
         self.start = time.time()
-        self.result = _TimerResult()
-        return self.result
+        self.result = None
+        return self
 
     def __exit__(self, typ, value, tb):
-        if self.disabled():
-            return False
-
-        dt = time.time() - self.start
-        dt = int(round(dt * 1000))  # Convert to ms.
-        self.result.ms = dt
-        self.client.timing(self, dt)
-        del self.start, self.result  # Clean up.
+        elapsed = time.time() - self.start
+        elapsed = int(round(elapsed * 1000))  # Convert to ms.
+        self.result = elapsed
+        self.client.timer_send(self.name, elapsed, **self.msg_data)
         return False
 
 
@@ -151,6 +131,9 @@ class MetlogClient(object):
         :param filters: A sequence of filter callables.
         """
         self.setup(sender, logger, severity, disabled_timers, filters)
+        self._dynamic_methods = {}
+        self._timer_obs = {}
+        self._noop_timer = _NoOpTimer()
         # seed random for rate calculations
         random.seed()
 
@@ -173,7 +156,6 @@ class MetlogClient(object):
         self.hostname = socket.gethostname()
         self.pid = os.getpid()
 
-        self._dynamic_methods = {}
         if disabled_timers is None:
             self._disabled_timers = set()
         else:
@@ -218,22 +200,6 @@ class MetlogClient(object):
         meth = types.MethodType(method, self, self.__class__)
         setattr(self, name, meth)
 
-    @property
-    def timer(self):
-        """
-        Return a timer object that can be used as a context manager or a
-        decorator. Returned timer will be initialized w/ the following
-        parameters.
-
-        :param name: Required string label for the timer.
-        :param timestamp: Time at which the message is generated.
-        :param logger: String token identifying the message generator.
-        :param severity: Numerical code (0-7) for msg severity, per RFC 5424.
-        :param fields: Arbitrary key/value pairs for add'l metadata.
-        :param rate: Sample rate, btn 0 & 1, inclusive (i.e. .5 = 50%).
-        """
-        return _Timer(self)
-
     def metlog(self, type, timestamp=None, logger=None, severity=None,
                payload='', fields=None):
         """
@@ -260,21 +226,55 @@ class MetlogClient(object):
                         metlog_hostname=self.hostname)
         self.send_message(full_msg)
 
-    def timing(self, timer, elapsed):
+    def timer(self, name, timestamp=None, logger=None, severity=None,
+              fields=None, rate=1.0):
         """
-        Converts timing data provided by the Timer object into a metlog
-        message for delivery.
+        Return a timer object that can be used as a context manager or a
+        decorator, generating a metlog 'timer' message upon exit.
 
-        :param timer: Timer object.
-        :param elapsed: Elapsed time of the timed event, in ms.
+        :param name: Required string label for the timer.
+        :param timestamp: Time at which the message is generated.
+        :param logger: String token identifying the message generator.
+        :param severity: Numerical code (0-7) for msg severity, per RFC 5424.
+        :param fields: Arbitrary key/value pairs for add'l metadata.
+        :param rate: Sample rate, btn 0 & 1, inclusive (i.e. .5 = 50%). Sample
+                     rate is enforced in this method, i.e. if a sample rate is
+                     used then some percentage of the timers will do nothing.
         """
-        if timer.rate < 1 and random.random() >= timer.rate:
-            return
+        # check if timer(s) is(are) disabled or if we exclude for sample rate
+        if ((self._disabled_timers.intersection(set(['*', name]))) or
+            (rate < 1.0 and random.random() >= rate)):
+            return self._noop_timer
+        msg_data = dict(timestamp=timestamp, logger=logger, severity=severity,
+                        fields=fields, rate=rate)
+        if name in self._timer_obs:
+            timer = self._timer_obs[name]
+            timer.msg_data = msg_data
+        else:
+            timer = _Timer(self, name, msg_data)
+            self._timer_obs[name] = timer
+        return timer
+
+    def timer_send(self, name, elapsed, timestamp=None, logger=None,
+                   severity=None, fields=None, rate=1.0):
+        """
+        Converts timing data into a metlog message for delivery.
+
+        :param name: Required string label for the timer.
+        :param elapsed: Elapsed time of the timed event, in ms.
+        :param timestamp: Time at which the message is generated.
+        :param logger: String token identifying the message generator.
+        :param severity: Numerical code (0-7) for msg severity, per RFC 5424.
+        :param fields: Arbitrary key/value pairs for add'l metadata.
+        :param rate: Sample rate, btn 0 & 1, inclusive (i.e. .5 = 50%). Sample
+                     rate is *NOT* enforced in this method, i.e. all messages
+                     will be sent through to metlog, sample rate is purely
+                     informational at this point.
+        """
         payload = str(elapsed)
-        fields = timer.fields if timer.fields is not None else dict()
-        fields.update({'name': timer.name, 'rate': timer.rate})
-        self.metlog('timer', timer.timestamp, timer.logger, timer.severity,
-                    payload, fields)
+        fields = fields if fields is not None else dict()
+        fields.update({'name': name, 'rate': rate})
+        self.metlog('timer', timestamp, logger, severity, payload, fields)
 
     def incr(self, name, count=1, timestamp=None, logger=None, severity=None,
              fields=None, rate=1.0):
