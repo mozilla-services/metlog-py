@@ -134,6 +134,9 @@ class MetlogClient(object):
         self._dynamic_methods = {}
         self._timer_obs = {}
         self._noop_timer = _NoOpTimer()
+        self.hostname = socket.gethostname()
+        self.pid = os.getpid()
+
         # seed random for rate calculations
         random.seed()
 
@@ -152,9 +155,6 @@ class MetlogClient(object):
         self.sender = sender
         self.logger = logger
         self.severity = severity
-
-        self.hostname = socket.gethostname()
-        self.pid = os.getpid()
 
         if disabled_timers is None:
             self._disabled_timers = set()
