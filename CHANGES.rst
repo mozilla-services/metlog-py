@@ -1,5 +1,21 @@
-0.8.6 - ????-??-??
-==================
+0.9 - 2012-05-31
+================
+
+- Refactored / simplified filter and plug-in config loading code
+- Filter functions now use closures for filter config (matching plug-in config)
+  instead of passing the config as an argument each time.
+- `MetlogClient.add_method` now supports `override` argument to force the issue
+  of replacing existing attributes.
+- Added `metlog_hostname` and `metlog_pid` to the message envelope handed to the
+  sender.
+- Added support for `rate` argument to `MetlogClient.incr` method.
+- `MetlogClient.timer` converted from a property to a method, allowing for much
+  better performance and much simpler code.
+- Got rid of `new_default` argument `MetlogClientHolder.delete_client`. Folks
+  can set a new default w/ another function call if necessary.
+- `DebugCaptureSender.__init__` now accepts arbitrary keyword args and stores
+  them as attributes on the instance to allow for easier testing of the config
+  parsing code.
 
 0.8.5 - 2012-05-07
 ==================
