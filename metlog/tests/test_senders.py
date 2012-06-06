@@ -11,13 +11,16 @@
 #   Rob Miller (rmiller@mozilla.com)
 #
 # ***** END LICENSE BLOCK *****
-from metlog.senders import ZmqPubSender, zmq
-from metlog.senders import StdOutSender
+from metlog.client import SEVERITY
+from metlog.senders.dev import StdOutSender
+from metlog.senders.logging import StdLibLoggingSender
+from metlog.senders.zmq import ZmqPubSender, zmq
 from mock import patch
 from nose.plugins.skip import SkipTest
 from nose.tools import eq_
 
 import json
+import logging
 import threading
 import time
 
@@ -118,3 +121,63 @@ class TestStdOutSender(object):
         eq_(mock_stdout.write.call_count, 1)
         eq_(mock_stdout.flush.call_count, 1)
         mock_stdout.write.assert_called_with(formatter(self.msg) + '\n')
+
+
+@patch('metlog.senders.logging.logging')
+class TestLoggingSender(object):
+    msgs = [{'type': 'oldstyle', 'payload': 'oldstyle',
+             'severity': SEVERITY.WARNING},
+            {'type': 'this', 'payload': 'this', 'severity': SEVERITY.ERROR},
+            {'type': 'that', 'payload': 'that',
+             'severity': SEVERITY.INFORMATIONAL},
+            {'type': 'the other', 'payload': 'the other',
+             'severity': SEVERITY.DEBUG},
+            ]
+
+    def _make_one(self, *args, **kwargs):
+        return StdLibLoggingSender(*args, **kwargs)
+
+    def _send_em(self, sender):
+        for msg in self.msgs:
+            sender.send_message(msg)
+
+    def test_defaults(self, mock_logging):
+        sender = self._make_one()
+        self._send_em(sender)
+        log = mock_logging.getLogger().log
+        eq_(log.call_count, 4)
+        log.assert_any_call(logging.WARN, 'oldstyle')
+        log.assert_any_call(logging.ERROR, json.dumps(self.msgs[1]))
+        log.assert_any_call(logging.INFO, json.dumps(self.msgs[2]))
+        log.assert_called_with(logging.DEBUG, json.dumps(self.msgs[3]))
+
+    def test_alternate_logger_name(self, mock_logging):
+        name = 'logger_name'
+        sender = self._make_one(name)
+        self._send_em(sender)
+        log = mock_logging.getLogger(name).log
+        eq_(log.call_count, 4)
+        log.assert_any_call(logging.WARN, 'oldstyle')
+        log.assert_any_call(logging.ERROR, json.dumps(self.msgs[1]))
+        log.assert_any_call(logging.INFO, json.dumps(self.msgs[2]))
+        log.assert_called_with(logging.DEBUG, json.dumps(self.msgs[3]))
+
+    def test_specific_types(self, mock_logging):
+        sender = self._make_one(payload_types=['this', 'that'],
+                                json_types=['the other'])
+        self._send_em(sender)
+        log = mock_logging.getLogger().log
+        eq_(log.call_count, 3)
+        log.assert_any_call(logging.ERROR, 'this')
+        log.assert_any_call(logging.INFO, 'that')
+        log.assert_called_with(logging.DEBUG, json.dumps(self.msgs[3]))
+
+    def test_payload_all(self, mock_logging):
+        sender = self._make_one(payload_types=['*'])
+        self._send_em(sender)
+        log = mock_logging.getLogger().log
+        eq_(log.call_count, 4)
+        log.assert_any_call(logging.WARN, 'oldstyle')
+        log.assert_any_call(logging.ERROR, 'this')
+        log.assert_any_call(logging.INFO, 'that')
+        log.assert_any_call(logging.DEBUG, 'the other')
