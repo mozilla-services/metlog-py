@@ -63,10 +63,14 @@ class StdLibLoggingSender(object):
             self.logger = logging.getLogger(logger_name)
         if payload_types is None:
             payload_types = ['oldstyle']
+        if isinstance(payload_types, basestring):
+            payload_types = [payload_types]
         self.payload_types = set(payload_types)
         if json_types is None:
             json_types = ['*']
-        self.json_types = json_types
+        if isinstance(json_types, basestring):
+            json_types = [json_types]
+        self.json_types = set(json_types)
 
     def send_message(self, msg):
         if msg['type'] in self.payload_types or '*' in self.payload_types:
