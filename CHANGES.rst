@@ -1,3 +1,9 @@
+0.9.1 - 2012-06-08
+==================
+
+- Added `StdLibLoggingSender` that delegates message delivery to Python's
+  standard library `logging` module.
+
 0.9 - 2012-05-31
 ================
 
