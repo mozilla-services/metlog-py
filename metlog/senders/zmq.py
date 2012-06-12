@@ -16,16 +16,17 @@ try:
     import simplejson as json
 except ImportError:
     import json  # NOQA
-try:
-    from gevent_zeromq import zmq
-except ImportError:
-    zmq = None  # NOQA
 
 import threading
 import sys
 import time
 
 if 'gevent.monkey' in sys.modules:
+    try:
+        from gevent_zeromq import zmq
+    except ImportError:
+        zmq = None  # NOQA
+
     from gevent import queue as Queue
 else:
     import Queue  # NOQA
