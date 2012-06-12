@@ -47,6 +47,8 @@ setup(name='metlog-py',
           'nose',
           'mock',
           'pyzmq',
+          'pyzmq',
+          'gevent_zmq',
           ],
       entry_points={
           },

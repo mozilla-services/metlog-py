@@ -13,18 +13,22 @@
 # ***** END LICENSE BLOCK *****
 from __future__ import absolute_import
 try:
-    import simplesjson as json
+    import simplejson as json
 except ImportError:
     import json  # NOQA
 try:
-    import zmq
+    from gevent_zeromq import zmq
 except ImportError:
     zmq = None  # NOQA
 
-import Queue
 import threading
 import sys
 import time
+
+if 'gevent.monkey' in sys.modules:
+    from gevent import queue as Queue
+else:
+    import Queue  # NOQA
 
 # We need to set the maximum number of outbound messages so that
 # applications don't consume infinite memory if outbound messages are
