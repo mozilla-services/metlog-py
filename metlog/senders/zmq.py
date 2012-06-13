@@ -22,14 +22,18 @@ import sys
 import time
 
 if 'gevent.monkey' in sys.modules:
+    from gevent import queue as Queue
+else:
+    import Queue  # NOQA
+
+zmq = None  # NOQA
+if 'gevent.monkey' in sys.modules:
     try:
         from gevent_zeromq import zmq
     except ImportError:
         zmq = None  # NOQA
-
-    from gevent import queue as Queue
 else:
-    import Queue  # NOQA
+    import zmq
 
 # We need to set the maximum number of outbound messages so that
 # applications don't consume infinite memory if outbound messages are
