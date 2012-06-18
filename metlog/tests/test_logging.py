@@ -18,7 +18,6 @@ from mock import Mock
 from nose.tools import eq_
 
 import logging
-import threading
 
 
 class TestLoggingHook(object):
@@ -37,4 +36,3 @@ class TestLoggingHook(object):
         msg = "this is an info message"
         logger.info(msg)
         eq_(msg, self.mock_sender.send_message.call_args[0][0]['payload'])
-
