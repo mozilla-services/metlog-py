@@ -297,27 +297,35 @@ class MetlogClient(object):
         self.metlog('counter', timestamp, logger, severity, payload, fields)
 
     # Standard Python logging API emulation
-    def debug(self, msg):
+    def _oldstyle(self, severity, msg, *args):
+        """Do any necessary string formatting and then generate the msg"""
+        # if `args` is a mapping then extract it
+        if (len(args) == 1 and hasattr(args[0], 'keys')
+            and hasattr(args[0], '__getitem__')):
+            args = args[0]
+        msg = msg % args
+        self.metlog(type='oldstyle', severity=severity, payload=msg)
+
+    def debug(self, msg, *args):
         """ Log a DEBUG level message """
-        self.metlog(type='oldstyle', severity=SEVERITY.DEBUG, payload=msg)
+        self._oldstyle(SEVERITY.DEBUG, msg, *args)
 
-    def info(self, msg):
+    def info(self, msg, *args):
         """ Log a INFO level message """
-        self.metlog(type='oldstyle', severity=SEVERITY.INFORMATIONAL,
-                    payload=msg)
+        self._oldstyle(SEVERITY.INFORMATIONAL, msg, *args)
 
-    def warn(self, msg):
+    def warn(self, msg, *args):
         """ Log a WARN level message """
-        self.metlog(type='oldstyle', severity=SEVERITY.WARNING, payload=msg)
+        self._oldstyle(SEVERITY.WARNING, msg, *args)
 
-    def error(self, msg):
+    def error(self, msg, *args):
         """ Log a ERROR level message """
-        self.metlog(type='oldstyle', severity=SEVERITY.ERROR, payload=msg)
+        self._oldstyle(SEVERITY.ERROR, msg, *args)
 
-    def exception(self, msg):
+    def exception(self, msg, *args):
         """ Log a ALERT level message """
-        self.metlog(type='oldstyle', severity=SEVERITY.ALERT, payload=msg)
+        self._oldstyle(SEVERITY.ALERT, msg, *args)
 
-    def critical(self, msg):
+    def critical(self, msg, *args):
         """ Log a CRITICAL level message """
-        self.metlog(type='oldstyle', severity=SEVERITY.CRITICAL, payload=msg)
+        self._oldstyle(SEVERITY.CRITICAL, msg, *args)

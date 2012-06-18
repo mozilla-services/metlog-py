@@ -13,7 +13,7 @@
 # ***** END LICENSE BLOCK *****
 from __future__ import absolute_import
 from datetime import datetime
-from metlog.client import MetlogClient
+from metlog.client import MetlogClient, SEVERITY
 from mock import Mock
 from nose.tools import eq_, ok_
 from metlog.senders.dev import DebugCaptureSender
@@ -82,6 +82,28 @@ class TestMetlogClient(object):
                             'metlog_hostname': socket.gethostname(),
                             'timestamp': metlog_args['timestamp'].isoformat()})
         eq_(actual_msg, metlog_args)
+
+    def test_oldstyle(self):
+        payload = 'debug message'
+        self.client.debug(payload)
+        full_msg = self._extract_full_msg()
+        eq_(full_msg['payload'], payload)
+        eq_(full_msg['severity'], SEVERITY.DEBUG)
+
+    def test_oldstyle_args(self):
+        payload = '1, 2: %s\n3, 4: %s'
+        args = ('buckle my shoe', 'shut the door')
+        self.client.warn(payload, *args)
+        full_msg = self._extract_full_msg()
+        eq_(full_msg['payload'], payload % args)
+
+    def test_oldstyle_mapping_arg(self):
+        payload = '1, 2: %(onetwo)s\n3, 4: %(threefour)s'
+        args = {'onetwo': 'buckle my shoe',
+                'threefour': 'shut the door'}
+        self.client.warn(payload, args)
+        full_msg = self._extract_full_msg()
+        eq_(full_msg['payload'], payload % args)
 
     def test_timer_contextmanager(self):
         name = self.timer_name
