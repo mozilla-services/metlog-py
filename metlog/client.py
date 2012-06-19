@@ -14,10 +14,6 @@
 #
 # ***** END LICENSE BLOCK *****
 from __future__ import absolute_import
-try:
-    import cStringIO as StringIO
-except ImportError:
-    import StringIO  # NOQA
 import os
 import random
 import socket
@@ -314,11 +310,9 @@ class MetlogClient(object):
         if exc_info:
             if not isinstance(exc_info, tuple):
                 exc_info = sys.exc_info()
-            sio = StringIO.StringIO()
-            traceback.print_exception(exc_info[0], exc_info[1], exc_info[2],
-                                      None, sio)
-            s = sio.getvalue()
-            sio.close()
+            tb_lines = traceback.format_exception(exc_info[0], exc_info[1],
+                                                  exc_info[2])
+            s = ''.join(tb_lines)
             if s[-1:] == '\n':
                 s = s[:-1]
             if msg[-1:] != '\n':
