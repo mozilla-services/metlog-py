@@ -14,11 +14,17 @@
 #
 # ***** END LICENSE BLOCK *****
 from __future__ import absolute_import
+try:
+    import cStringIO as StringIO
+except ImportError:
+    import StringIO  # NOQA
 import os
 import random
 import socket
+import sys
 import threading
 import time
+import traceback
 import types
 
 from datetime import datetime
@@ -297,35 +303,52 @@ class MetlogClient(object):
         self.metlog('counter', timestamp, logger, severity, payload, fields)
 
     # Standard Python logging API emulation
-    def _oldstyle(self, severity, msg, *args):
+    def _oldstyle(self, severity, msg, *args, **kwargs):
         """Do any necessary string formatting and then generate the msg"""
         # if `args` is a mapping then extract it
         if (len(args) == 1 and hasattr(args[0], 'keys')
             and hasattr(args[0], '__getitem__')):
             args = args[0]
         msg = msg % args
+        exc_info = kwargs.get('exc_info', False)
+        if exc_info:
+            if not isinstance(exc_info, tuple):
+                exc_info = sys.exc_info()
+            sio = StringIO.StringIO()
+            traceback.print_exception(exc_info[0], exc_info[1], exc_info[2],
+                                      None, sio)
+            s = sio.getvalue()
+            sio.close()
+            if s[-1:] == '\n':
+                s = s[:-1]
+            if msg[-1:] != '\n':
+                msg = msg + '\n'
+            try:
+                msg = msg + s
+            except UnicodeError:
+                msg = msg + s.decode(sys.getfilesystemencoding())
         self.metlog(type='oldstyle', severity=severity, payload=msg)
 
-    def debug(self, msg, *args):
+    def debug(self, msg, *args, **kwargs):
         """ Log a DEBUG level message """
-        self._oldstyle(SEVERITY.DEBUG, msg, *args)
+        self._oldstyle(SEVERITY.DEBUG, msg, *args, **kwargs)
 
-    def info(self, msg, *args):
-        """ Log a INFO level message """
-        self._oldstyle(SEVERITY.INFORMATIONAL, msg, *args)
+    def info(self, msg, *args, **kwargs):
+        """ Log an INFO level message """
+        self._oldstyle(SEVERITY.INFORMATIONAL, msg, *args, **kwargs)
 
-    def warn(self, msg, *args):
+    def warn(self, msg, *args, **kwargs):
         """ Log a WARN level message """
-        self._oldstyle(SEVERITY.WARNING, msg, *args)
+        self._oldstyle(SEVERITY.WARNING, msg, *args, **kwargs)
 
-    def error(self, msg, *args):
-        """ Log a ERROR level message """
-        self._oldstyle(SEVERITY.ERROR, msg, *args)
+    def error(self, msg, *args, **kwargs):
+        """ Log an ERROR level message """
+        self._oldstyle(SEVERITY.ERROR, msg, *args, **kwargs)
 
-    def exception(self, msg, *args):
-        """ Log a ALERT level message """
-        self._oldstyle(SEVERITY.ALERT, msg, *args)
+    def exception(self, msg, exc_info=True, *args, **kwargs):
+        """ Log an ALERT level message """
+        self._oldstyle(SEVERITY.ALERT, msg, exc_info=exc_info, *args, **kwargs)
 
-    def critical(self, msg, *args):
+    def critical(self, msg, *args, **kwargs):
         """ Log a CRITICAL level message """
-        self._oldstyle(SEVERITY.CRITICAL, msg, *args)
+        self._oldstyle(SEVERITY.CRITICAL, msg, *args, **kwargs)

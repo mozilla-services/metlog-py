@@ -18,8 +18,9 @@ from mock import Mock
 from nose.tools import eq_, ok_
 from metlog.senders.dev import DebugCaptureSender
 
-import socket
 import os
+import socket
+import sys
 import threading
 import time
 
@@ -104,6 +105,43 @@ class TestMetlogClient(object):
         self.client.warn(payload, args)
         full_msg = self._extract_full_msg()
         eq_(full_msg['payload'], payload % args)
+
+    def test_oldstyle_exc_info(self):
+        payload = 'traceback ahead -->'
+        try:
+            a = b  # NOQA
+        except NameError:
+            self.client.error(payload, exc_info=True)
+        full_msg = self._extract_full_msg()
+        ok_(full_msg['payload'].startswith(payload))
+        ok_("NameError: global name 'b' is not defined" in full_msg['payload'])
+        ok_('test_client.py' in full_msg['payload'])
+
+    def test_oldstyle_exc_info_auto(self):
+        payload = 'traceback ahead -->'
+        try:
+            a = b  # NOQA
+        except NameError:
+            self.client.exception(payload)
+        full_msg = self._extract_full_msg()
+        ok_(full_msg['payload'].startswith(payload))
+        ok_("NameError: global name 'b' is not defined" in full_msg['payload'])
+        ok_('test_client.py' in full_msg['payload'])
+
+    def test_oldstyle_exc_info_passed(self):
+        def name_error():
+            try:
+                a = b  # NOQA
+            except NameError:
+                return sys.exc_info()
+
+        ei = name_error()
+        payload = 'traceback ahead -->'
+        self.client.critical(payload, exc_info=ei)
+        full_msg = self._extract_full_msg()
+        ok_(full_msg['payload'].startswith(payload))
+        ok_("NameError: global name 'b' is not defined" in full_msg['payload'])
+        ok_('test_client.py' in full_msg['payload'])
 
     def test_timer_contextmanager(self):
         name = self.timer_name
