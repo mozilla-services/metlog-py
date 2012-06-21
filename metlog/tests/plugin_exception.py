@@ -14,7 +14,7 @@ entry_points section.
 Each plugin is bound into the metlog client if and only if there is
 configuration for the plugin.
 """
-METLOG_PLUGIN_NAME = 'dummy'
+METLOG_PLUGIN_NAME = 'exception'
 
 def config_plugin(config_dict):
     # Normally, the config_dict is unwrapped to get

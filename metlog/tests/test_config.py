@@ -231,18 +231,19 @@ def test_plugin_override():
     cfg_txt = """
     [metlog]
     sender_class = metlog.senders.DebugCaptureSender
+
     [metlog_plugin_exception]
     override=True
     provider=metlog.tests.plugin:config_plugin
     """
     client = client_from_text_config(cfg_txt, 'metlog')
-    eq_('my_plugin', client.exception.__name__)
+    eq_('dummy', client.dummy.metlog_name)
 
     cfg_txt = """
     [metlog]
     sender_class = metlog.senders.DebugCaptureSender
     [metlog_plugin_exception]
-    provider=metlog.tests.plugin:config_plugin
+    provider=metlog.tests.plugin_exception:config_plugin
     """
     # Failure to set an override argument will throw an exception
     assert_raises(SyntaxError, client_from_text_config, cfg_txt, 'metlog')
