@@ -131,14 +131,16 @@ the name `provider`. This is a dotted name for a function which will be used to
 configure a plugin.  The return value for the provider is a configured method
 which will then be bound into the Metlog client.
 
-Each plugin extension method is bound in with the suffix that follows the
-`metlog_plugin_` prefix in the configuration section name.
+Each plugin extension method has a canonical name that is bound to the
+metlog client as a method name. The suffix that follows the
+`metlog_plugin_` prefix is used only to distinguish logical sections
+for each plugin within the configuration file.
 
 An example best demonstrates what can be expected.  To load the dummy plugin,
 you need a `metlog_plugin_dummy` section as well as some configuration
 parameters. Here's an example ::
 
-    [metlog_plugin_dummy]
+    [metlog_plugin_dummysection]
     provider=metlog.tests.plugin.config_plugin
     port=8080
     host=localhost
