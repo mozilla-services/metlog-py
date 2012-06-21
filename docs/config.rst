@@ -169,27 +169,31 @@ be converted to the following dictionary::
    'sender': {'class': 'metlog.senders.zmq.ZmqPubSender',
               'bindstrs': 'tcp://127.0.0.1:5565',
               'queue_length': 5000,
-              },
-   'global': {'disabled_decorators': ['incr_count'],
-              },
+    },
+   'global': {'disabled_decorators': ['incr_count']},
    'filters': [('metlog.filters.severity_max',
                 {'severity': 4},
                 ),
                ('metlog.filters.type_whitelist',
                 {'types': ['timer', 'oldstyle']},
                 ),
-               ],
+   ],
    }
 
 To manually load a Metlog client with plugins, the `client_from_dict_config`
-function allows you to pass in a plugin_parm argument.  The configuration
-specified in the "plugins" section above would be converted into the following
-dictionary ::
+function allows you to pass in a list of plugin configurations using the
+`plugins` dict key, used in the same fashion as `filters` in the example
+directly above.
+
+The configuration specified in the "plugins" section above would be converted
+into the following dictionary, where the key will be the name of the method
+bound to the client::
 
     {'dummy': ('metlog.tests.plugin:config_plugin',
                {'port': 8080,
                 'host': 'localhost'
                 },
+    )
     }
 
 
