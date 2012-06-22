@@ -187,7 +187,7 @@ def client_from_dict_config(config, client=None, clear_global=False):
         client.setup(sender, logger, severity, disabled_timers, filters)
 
     # initialize plugins and attach to client
-    for ignored_plugin_name, plugin_spec in plugins_data.items():
+    for section_name, plugin_spec in plugins_data.items():
         # each plugin spec is a 2-tuple: (dotted_name, cfg)
         plugin_config = plugin_spec[1]
         plugin_override = plugin_config.pop('override', False)
