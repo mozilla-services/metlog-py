@@ -190,17 +190,21 @@ class MetlogClient(object):
         Add a custom method to the MetlogClient instance.
 
         :param method: Callable that will be used as the method.
-        :param override: Set this to True if you really want to
-                         override an existing method.
+        :param override: Set this to the method name you want to
+                         override. False indicates no override will
+                         occur.
         """
         assert isinstance(method, types.FunctionType)
 
         # Obtain the metlog name directly from the method
-        name = method.metlog_name 
+        name = method.metlog_name
+        if isinstance(override, basestring):
+            name = override
 
-        if not override and hasattr(self, name):
+        if override is False and hasattr(self, name):
             msg = "The name [%s] is already in use" % name
             raise SyntaxError(msg)
+
         self._dynamic_methods[name] = method
         meth = types.MethodType(method, self, self.__class__)
         setattr(self, name, meth)

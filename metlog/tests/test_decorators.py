@@ -16,6 +16,7 @@ import socket
 import os
 
 from metlog.config import client_from_dict_config
+from metlog.client import MetlogClient
 from metlog.decorators import incr_count
 from metlog.decorators import timeit
 from metlog.holder import CLIENT_HOLDER
@@ -101,7 +102,7 @@ class TestDecoratorArgs(DecoratorTestBase):
                         'rate': 1.0,
                         },
                     'logger': 'somelogger', 'type': 'counter',
-                    'payload': '5', 'env_version': '0.8',
+                    'payload': '5', 'env_version': MetlogClient.env_version,
                     'metlog_hostname': socket.gethostname(),
                     'metlog_pid': os.getpid(),
                     }
@@ -131,7 +132,7 @@ class TestDecoratorArgs(DecoratorTestBase):
                                'name': 'qdo.timeit', 'atext': 'foo',
                                },
                     'logger': 'timeit_logger', 'type': 'timer',
-                    'payload': '0', 'env_version': '0.8',
+                    'payload': '0', 'env_version': MetlogClient.env_version,
                     'metlog_hostname': socket.gethostname(),
                     'metlog_pid': os.getpid(),
                     }
