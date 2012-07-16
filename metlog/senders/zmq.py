@@ -59,34 +59,6 @@ class BaseClient(object):
             return self._connected
 
 
-class SimpleClient(BaseClient):
-    def __init__(self, context, connect_bind, hwm=200):
-        super(SimpleClient, self).__init__(context)
-
-        self.connect_bind = connect_bind
-        self.hwm = hwm
-        self.socket = None
-
-        # The pub socket must be created
-        # Socket to actually do pub/sub
-        self.socket = self.context.socket(zmq.PUB)
-        for bindstr in self.connect_bind:
-            self.socket.connect(bindstr)
-        self.socket.setsockopt(zmq.LINGER, 0)
-        self.socket.setsockopt(zmq.HWM, self.hwm)
-        self.set_connected(True)
-
-    def connect(self):
-        """
-        For the SimpleClient, connect() does nothing as the connect is
-        handled in the initializer
-        """
-        return True
-
-    def send(self, msg):
-        self.socket.send(msg)
-
-
 class HandshakingClient(BaseClient):
     def __init__(self, context, handshake_bind, connect_bind,
                  handshake_timeout=200,
@@ -102,8 +74,9 @@ class HandshakingClient(BaseClient):
         self.handshake_socket = None
         self.socket = None
 
-        # Socket to actually do pub/sub
-        self.socket = self.context.socket(zmq.PUB)
+        # Socket to actually do PUSH to a PULL socket on the logstash
+        # side
+        self.socket = self.context.socket(zmq.PUSH)
         self.socket.connect(self.connect_bind)
         self.socket.setsockopt(zmq.LINGER, 0)
         self.socket.setsockopt(zmq.HWM, self.hwm)
@@ -112,6 +85,8 @@ class HandshakingClient(BaseClient):
         """
         Connect To the 0mq REPL socket and attempt a handshake to
         ensure we're properly connected.
+
+        This is an implementation of the lazy pirate client pattern for 0mq
         """
         # Socket to send handshake signals
         self.handshake_socket = None
@@ -265,44 +240,6 @@ class ZmqSender(object):
         self.pool.send(json_msg)
 
 
-class ZmqPubSender(ZmqSender):
-    """
-    Sends metlog messages out via a ZeroMQ publisher socket.
-    """
-
-    def __init__(self, bindstrs,
-                 pool_size=10,
-                 queue_length=MAX_MESSAGES,
-                 livecheck=10,
-                 debug_stderr=False):
-        """
-        :param bindstrs:
-            One or more URL strings which 0mq recognizes as an
-            endpoint URL. Either a string or a list of strings is
-            accepted.
-        :param pool_size:
-            The number of connections we maintain to the 0mq backend
-        :param livecheck:
-            Polling interval in seconds between client.connect() calls
-        :param debug_stderr:
-            Boolean flag to send messages to stderr in addition to the
-            actual 0mq socket
-        """
-
-        if isinstance(bindstrs, basestring):
-            bindstrs = [bindstrs]
-
-        def get_client():
-            return SimpleClient(self._zmq_context,
-                                bindstrs,
-                                queue_length)
-
-        self.pool = Pool(client_factory=get_client,
-                size=pool_size,
-                livecheck=livecheck)
-        self.debug_stderr = debug_stderr
-
-
 class ZmqHandshakePubSender(ZmqSender):
     """
     Sends metlog messages out via a ZeroMQ publisher socket.
@@ -351,3 +288,73 @@ class ZmqHandshakePubSender(ZmqSender):
                 size=pool_size,
                 livecheck=livecheck)
         self.debug_stderr = debug_stderr
+
+
+
+# This client is deprecated and should not be used as it causes
+# lockups occasionally
+#
+#class SimpleClient(BaseClient):
+#    def __init__(self, context, connect_bind, hwm=200):
+#        super(SimpleClient, self).__init__(context)
+#
+#        self.connect_bind = connect_bind
+#        self.hwm = hwm
+#        self.socket = None
+#
+#        # The pub socket must be created
+#        # Socket to actually do pub/sub
+#        self.socket = self.context.socket(zmq.PUB)
+#        for bindstr in self.connect_bind:
+#            self.socket.connect(bindstr)
+#        self.socket.setsockopt(zmq.LINGER, 0)
+#        self.socket.setsockopt(zmq.HWM, self.hwm)
+#        self.set_connected(True)
+#
+#    def connect(self):
+#        """
+#        For the SimpleClient, connect() does nothing as the connect is
+#        handled in the initializer
+#        """
+#        return True
+#
+#    def send(self, msg):
+#        self.socket.send(msg)
+
+# The ZmqPubSender is deprecated as it causes lockups
+#class ZmqPubSender(ZmqSender):
+#    """
+#    Sends metlog messages out via a ZeroMQ publisher socket.
+#    """
+#
+#    def __init__(self, bindstrs,
+#                 pool_size=10,
+#                 queue_length=MAX_MESSAGES,
+#                 livecheck=10,
+#                 debug_stderr=False):
+#        """
+#        :param bindstrs:
+#            One or more URL strings which 0mq recognizes as an
+#            endpoint URL. Either a string or a list of strings is
+#            accepted.
+#        :param pool_size:
+#            The number of connections we maintain to the 0mq backend
+#        :param livecheck:
+#            Polling interval in seconds between client.connect() calls
+#        :param debug_stderr:
+#            Boolean flag to send messages to stderr in addition to the
+#            actual 0mq socket
+#        """
+#
+#        if isinstance(bindstrs, basestring):
+#            bindstrs = [bindstrs]
+#
+#        def get_client():
+#            return SimpleClient(self._zmq_context,
+#                                bindstrs,
+#                                queue_length)
+#
+#        self.pool = Pool(client_factory=get_client,
+#                size=pool_size,
+#                livecheck=livecheck)
+#        self.debug_stderr = debug_stderr
