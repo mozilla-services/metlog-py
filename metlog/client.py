@@ -116,7 +116,8 @@ class MetlogClient(object):
     Client class encapsulating metlog API, and providing storage for default
     values for various metlog call settings.
     """
-    env_version = '0.9'
+    # envelope version, only changes when the message format changes
+    env_version = '0.8'
 
     def __init__(self, sender, logger, severity=6,
                  disabled_timers=None, filters=None):

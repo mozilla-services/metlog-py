@@ -1,5 +1,18 @@
-0.9.2 - ????-??-??
+0.9.3 - ????-??-??
 ==================
+
+0.9.2 - 2012-06-22
+==================
+
+- Plugin method names are now expected to be stored in the `metlog_name`
+  attribute of the provided function rather than passed in separately.
+
+- 'oldstyle' messages now support string substitution using provided args and
+  the `exc_info` keyword argument for slightly better stdlib logging
+  compatibility.
+
+- ZeroMQ sender now uses gevent safe implementations of `Queue` class and `zmq`
+  module if the gevent monkeypatches have been applied.
 
 0.9.1 - 2012-06-08
 ==================
