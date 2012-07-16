@@ -69,7 +69,7 @@ class SimpleClient(BaseClient):
 
         # The pub socket must be created
         # Socket to actually do pub/sub
-        self.socket = self.context.socket(zmq.PUB)
+        self.socket = self.context.socket(zmq.PUSH)
         for bindstr in self.connect_bind:
             self.socket.connect(bindstr)
         self.socket.setsockopt(zmq.LINGER, 0)
