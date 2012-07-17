@@ -6,8 +6,17 @@
 #
 
 import time
-import zmq
 import threading
+import sys
+
+try:
+    if 'gevent.monkey' in sys.modules:
+        from gevent_zeromq import zmq
+    else:
+        import zmq  # NOQA
+except ImportError:
+    zmq = None  # NOQA
+
 
 REQUEST_TIMEOUT = 2500
 REQUEST_RETRIES = 3

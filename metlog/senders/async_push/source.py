@@ -2,12 +2,23 @@
 This is a dummy 0mq server that just read messages from the PUB/SUB
 interface
 """
-import zmq
 import time
 import sys
 import os
 import threading
-import Queue
+
+if 'gevent.monkey' in sys.modules:
+    from gevent import queue as Queue
+else:
+    import Queue  # NOQA
+
+try:
+    if 'gevent.monkey' in sys.modules:
+        from gevent_zeromq import zmq
+    else:
+        import zmq  # NOQA
+except ImportError:
+    zmq = None  # NOQA
 
 
 class NullObject(object):
