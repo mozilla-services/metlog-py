@@ -12,6 +12,8 @@
 #
 # ***** END LICENSE BLOCK *****
 from __future__ import absolute_import
+from metlog.senders.async_push.source import AsyncSender
+
 try:
     import simplejson as json
 except ImportError:
@@ -43,6 +45,7 @@ class HandshakingClient(object):
     def __init__(self, context, handshake_bind, connect_bind,
             hwm=200):
 
+        self.queue = Queue.Queue(500)
         self.context = context
         self.handshake_bind = handshake_bind
         self.connect_bind = connect_bind
@@ -53,17 +56,29 @@ class HandshakingClient(object):
         self.socket = None
 
         # Socket to actually do PUSH/PULL
+        self.async_sender = AsyncSender(self.context, self.queue,
+                self.connect_bind)
+
+        # Fire up the thread
+        self.async_sender.start()
+        """
         self.socket = self.context.socket(zmq.PUSH)
         self.socket.connect(self.connect_bind)
         self.socket.setsockopt(zmq.LINGER, 0)
         self.socket.setsockopt(zmq.HWM, self.hwm)
+        """
 
     def send(self, msg):
+        self.queue.put(msg)
+
+        """
+        # TODO: push this down into the async_sender
         try:
             self.socket.send(msg)
         except zmq.ZMQError:
             sys.stderr.write("%s\n" % msg)
             sys.stderr.flush()
+        """
 
 
 class Pool(object):
