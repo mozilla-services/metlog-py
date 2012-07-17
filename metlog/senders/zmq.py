@@ -180,7 +180,6 @@ class ZmqHandshakePubSender(ZmqSender):
                                 handshake_bind, connect_bind,
                                 hwm)
             # Try to get all clients to connect right away
-            client.connect()
             return client
 
         self.pool = Pool(client_factory=get_client,
