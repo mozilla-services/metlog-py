@@ -5,6 +5,7 @@
 # Author: Daniel Lundin <dln(at)eintr(dot)org>
 #
 
+import time
 import zmq
 import threading
 
@@ -25,6 +26,7 @@ class LazyPirateClient(threading.Thread):
         self.daemon = daemon
         self.context = ctx
         self.shutdown_hook = context_shutdown_hook
+        self.endpoint = endpoint
         self.poll = zmq.Poller()
 
     def run(self):
@@ -33,8 +35,9 @@ class LazyPirateClient(threading.Thread):
             retries_left = REQUEST_RETRIES
 
             self.client = self.context.socket(zmq.REQ)
-            self.server_endpoint = endpoint
+            self.server_endpoint = self.endpoint
             self.client.connect(self.server_endpoint)
+            print "Connecting to: %s" % self.server_endpoint
             self.poll.register(self.client, zmq.POLLIN)
 
             while retries_left:
@@ -55,6 +58,7 @@ class LazyPirateClient(threading.Thread):
                             print "I: Server replied OK (%s)" % reply
                             retries_left = REQUEST_RETRIES
                             expect_reply = False
+                            time.sleep(1)
                         else:
                             print "E: Malformed reply from server: %s" % reply
 
@@ -72,6 +76,7 @@ class LazyPirateClient(threading.Thread):
                         # Create new connection
                         self.client = self.context.socket(zmq.REQ)
                         self.client.connect(self.server_endpoint)
+                        print "Connecting to: %s" % self.server_endpoint
                         self.poll.register(self.client, zmq.POLLIN)
                         self.client.send(request)
             self.shutdown_hook()

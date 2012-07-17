@@ -13,6 +13,7 @@
 # ***** END LICENSE BLOCK *****
 from __future__ import absolute_import
 from metlog.senders.async_push.source import AsyncSender
+from metlog.senders.lazypirate.client import LazyPirateClient
 
 try:
     import simplejson as json
@@ -42,6 +43,10 @@ MAX_MESSAGES = 1000
 
 
 class HandshakingClient(object):
+    """
+    TODO: this class doesn't really do anything - get rid of it
+    and just use the AsyncSender directly
+    """
     def __init__(self, context, handshake_bind, connect_bind,
             hwm=200):
 
@@ -57,28 +62,16 @@ class HandshakingClient(object):
 
         # Socket to actually do PUSH/PULL
         self.async_sender = AsyncSender(self.context, self.queue,
-                self.connect_bind)
+                self.connect_bind, self.hwm)
 
         # Fire up the thread
         self.async_sender.start()
-        """
-        self.socket = self.context.socket(zmq.PUSH)
-        self.socket.connect(self.connect_bind)
-        self.socket.setsockopt(zmq.LINGER, 0)
-        self.socket.setsockopt(zmq.HWM, self.hwm)
-        """
+
+    def reconnect_sockets(self):
+        self.async_sender.reconnect = True
 
     def send(self, msg):
         self.queue.put(msg)
-
-        """
-        # TODO: push this down into the async_sender
-        try:
-            self.socket.send(msg)
-        except zmq.ZMQError:
-            sys.stderr.write("%s\n" % msg)
-            sys.stderr.flush()
-        """
 
 
 class Pool(object):
@@ -91,9 +84,10 @@ class Pool(object):
         The number of clients to create in the pool
     """
 
-    def __init__(self, client_factory, size=10):
+    def __init__(self, context, client_factory, handshake_bind, size=10):
         self._clients = Queue.Queue()
 
+        self.context = context
         # This list is only used to handle reconnects if the
         # connection to the 0mq subscriber dies
         self._all_clients = []
@@ -107,7 +101,13 @@ class Pool(object):
         # startup quickly
         self._connect_thread_started = False
 
-        # TODO: inject the lazy pirate over here as a heartbeat
+        self.lazy_pirate = LazyPirateClient(self.context,
+                self.shutdown_hook, handshake_bind)
+        self.lazy_pirate.start()
+
+    def shutdown_hook(self):
+        for client in self._all_clients:
+            client.reconnect_sockets()
 
     def send(self, msg):
         """
@@ -197,6 +197,8 @@ class ZmqHandshakePubSender(ZmqSender):
             # Try to get all clients to connect right away
             return client
 
-        self.pool = Pool(client_factory=get_client,
+        self.pool = Pool(context=self._zmq_context,
+                client_factory=get_client,
+                handshake_bind=handshake_bind,
                 size=pool_size)
         self.debug_stderr = debug_stderr

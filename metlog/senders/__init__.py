@@ -11,7 +11,7 @@
 #   Rob Miller (rmiller@mozilla.com)
 #
 # ***** END LICENSE BLOCK *****
-from metlog.senders.zmq import ZmqHandshakePubSender  # NOQA
+from metlog.senders.zmq_sender import ZmqHandshakePubSender  # NOQA
 from metlog.senders.dev import FileSender  # NOQA
 from metlog.senders.dev import StdOutSender  # NOQA
 from metlog.senders.dev import StreamSender  # NOQA

@@ -4,11 +4,10 @@ interface
 """
 import zmq
 import time
+import sys
 import os
 import threading
 import Queue
-
-URL = 'tcp://127.0.0.1:5565'
 
 
 class NullObject(object):
@@ -24,10 +23,11 @@ class AsyncSender(threading.Thread):
         2) Set the shutdown flag
         3) Set the reconnect flag to close the socket and open a new one
     """
-    def __init__(self, ctx, queue, zeromq_url):
+    def __init__(self, ctx, queue, zeromq_url, hwm):
         threading.Thread.__init__(self)
 
         self.daemon = True
+        self.hwm = hwm
         self.context = ctx
         self.queue = queue
         self.zeromq_url = zeromq_url
@@ -44,7 +44,7 @@ class AsyncSender(threading.Thread):
 
         self.sender = self.context.socket(zmq.PUSH)
         self.sender.setsockopt(zmq.LINGER, 0)
-        self.sender.setsockopt(zmq.HWM, 3)
+        self.sender.setsockopt(zmq.HWM, self.hwm)
         self.sender.connect(self.zeromq_url)
 
         self.reconnect = False
@@ -90,6 +90,7 @@ class AsyncSender(threading.Thread):
             set_shutdown_connection)
 
     def run(self):
+        print "Async sender started"
         self.connect()
         while True:
             msg = NullObject
@@ -110,12 +111,13 @@ class AsyncSender(threading.Thread):
                 try:
                     print "sending msg"
                     self.sender.send(msg, flags=zmq.NOBLOCK, track=True)
-                except zmq.core.error.ZMQError, zmq_e:
+                except zmq.core.error.ZMQError, zmq_e:  # NOQA
                     # This error gets thrown for *any* 0mq error. Just
                     # log it.  We can't reconnect here because the
                     # errors will just keep coming for a bit because
                     # of lazy joiner problems
-                    print "Exception: [%s]" % zmq_e
+                    sys.stderr.write("%s\n" % msg)
+                    sys.stderr.flush()
 
             if self.shutdown_connection:
                 self.disconnect()
