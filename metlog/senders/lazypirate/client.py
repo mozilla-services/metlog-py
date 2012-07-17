@@ -6,18 +6,20 @@
 #
 
 import zmq
+import threading
 
 REQUEST_TIMEOUT = 2500
 REQUEST_RETRIES = 3
 
 
-class LazyPirateClient(object):
+class LazyPirateClient(threading.Thread):
     """
     This class is used by the metlog client and runs as a background
     thread.  In the event that the server fails to respond in a timely
     manner, the context is destroyed.
     """
     def __init__(self, ctx, context_shutdown_hook, endpoint):
+        threading.Thread.__init__(self)
         print "I: Connecting to server..."
         self.context = ctx
         self.client = self.context.socket(zmq.REQ)
@@ -85,4 +87,4 @@ if __name__ == '__main__':
     endpoint = "tcp://localhost:5555"
 
     pirate = LazyPirateClient(context, shutdown_hook, endpoint)
-    pirate.run()
+    pirate.start()
