@@ -48,16 +48,16 @@ class AsyncSender(threading.Thread):
         self.sender.connect(self.zeromq_url)
 
         self.reconnect = False
-        print "Connected sender"
+        #print "Connected sender"
 
     def disconnect(self):
         # This should *only* be called from the run loop of
         # AsyncSender
         try:
             self.sender.close()
-            print "Disconnected sender: %s" % time.time()
-        except zmq.ZMQError, zmq_e:
-            print "Error disconnecting socket: %s" % zmq_e
+            #print "Disconnected sender: %s" % time.time()
+        except zmq.ZMQError, zmq_e:    # NOQA
+            #print "Error disconnecting socket: %s" % zmq_e
             pass
 
     def set_reconnect(self, value):
@@ -90,7 +90,7 @@ class AsyncSender(threading.Thread):
             set_shutdown_connection)
 
     def run(self):
-        print "Async sender started"
+        #print "Async sender started"
         self.connect()
         while True:
             msg = NullObject
@@ -109,7 +109,7 @@ class AsyncSender(threading.Thread):
 
             if msg != NullObject:
                 try:
-                    print "sending msg"
+                    #print "sending msg"
                     self.sender.send(msg, flags=zmq.NOBLOCK, track=True)
                 except zmq.core.error.ZMQError, zmq_e:  # NOQA
                     # This error gets thrown for *any* 0mq error. Just
@@ -127,7 +127,7 @@ class AsyncSender(threading.Thread):
                 self.disconnect()
                 self.connect()
 
-        print "Ending runloop"
+        #print "Ending runloop"
 
 
 def main():
