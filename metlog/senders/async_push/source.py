@@ -108,11 +108,6 @@ class AsyncSender(threading.Thread):
             try:
                 # This timeout is in seconds
                 msg = self.queue.get(timeout=0.001)
-
-                # we mark the task as done right away since we'll
-                # just route the msg to the logger if things go wrong
-                # anyway
-                self.queue.task_done()
             except Queue.Empty, ignored:   # NOQA
                 # The queue is empty - that's ok - we need to be able
                 # to terminate sockets if we are blocked on the queue
