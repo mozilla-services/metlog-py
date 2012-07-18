@@ -61,9 +61,6 @@ class HandshakingClient(object):
         self.sender.setsockopt(zmq.HWM, self.hwm)
         self.sender.connect(self.connect_bind)
 
-        # Fire up the thread
-        self.async_sender.start()
-
     def send(self, msg):
         try:
             self.sender.send(msg, flags=zmq.NOBLOCK, track=True)
