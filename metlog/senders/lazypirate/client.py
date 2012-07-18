@@ -1,13 +1,9 @@
-# Lazy Pirate client
-# Use zmq_poll to do a safe request-reply
-# To run, start lpserver and then randomly kill/restart it
-#
-# Author: Daniel Lundin <dln(at)eintr(dot)org>
-#
-
-import time
-import threading
+from __future__ import absolute_import
 import sys
+
+if 'gevent.monkey' in sys.modules:
+    from gevent import monkey
+    monkey.patch_all()
 
 try:
     if 'gevent.monkey' in sys.modules:
@@ -17,6 +13,8 @@ try:
 except ImportError:
     zmq = None  # NOQA
 
+import time
+import threading
 
 REQUEST_TIMEOUT = 2500
 REQUEST_RETRIES = 3
