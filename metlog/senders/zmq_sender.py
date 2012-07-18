@@ -30,9 +30,6 @@ try:
 except ImportError:
     zmq = None  # NOQA
 
-from metlog.senders.async_push.source import AsyncSender
-from metlog.senders.lazypirate.client import LazyPirateClient
-
 try:
     import simplejson as json
 except ImportError:
@@ -54,32 +51,29 @@ class HandshakingClient(object):
 
         self.queue = Queue.Queue(500)
         self.context = context
-        self.handshake_bind = handshake_bind
         self.connect_bind = connect_bind
-
         self.hwm = hwm
 
         self.handshake_socket = None
-        self.socket = None
 
-        # Socket to actually do PUSH
-        # We need to run the sender as its own thread since the
-        # heartbeat must run as it's own thread.  When the heartbeat
-        # dies - *some* thread of control must close the sockets.
-        # The main thread can't do it since we don't have coroutines
-        # everywhere and there's now way to tell the main thread to go
-        # stop each of the 0mq sockets
-        self.async_sender = AsyncSender(self.context, self.queue,
-                self.connect_bind, self.hwm)
+        self.sender = self.context.socket(zmq.PUSH)
+        self.sender.setsockopt(zmq.LINGER, 0)
+        self.sender.setsockopt(zmq.HWM, self.hwm)
+        self.sender.connect(self.connect_bind)
 
         # Fire up the thread
         self.async_sender.start()
 
-    def reconnect_sockets(self):
-        self.async_sender.reconnect = True
-
     def send(self, msg):
-        self.queue.put(msg)
+        try:
+            self.sender.send(msg, flags=zmq.NOBLOCK, track=True)
+        except zmq.core.error.ZMQError, zmq_e:  # NOQA
+            # This error gets thrown for *any* 0mq error. Just
+            # log it.  We can't reconnect here because the
+            # errors will just keep coming for a bit because
+            # of lazy joiner problems
+            sys.stderr.write("%s\n" % msg)
+            sys.stderr.flush()
 
 
 class Pool(object):
@@ -104,18 +98,6 @@ class Pool(object):
             client = client_factory()
             self._clients.put(client)
             self._all_clients.append(client)
-
-        # Connect the clients on a background thread so that we can
-        # startup quickly
-        self._connect_thread_started = False
-
-        self.lazy_pirate = LazyPirateClient(self.context,
-                self.shutdown_hook, handshake_bind)
-        self.lazy_pirate.start()
-
-    def shutdown_hook(self):
-        for client in self._all_clients:
-            client.reconnect_sockets()
 
     def send(self, msg):
         """
