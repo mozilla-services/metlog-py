@@ -9,21 +9,16 @@
 #
 # Contributor(s):
 #   Rob Miller (rmiller@mozilla.com)
-#
+#   Victor Ng (vng@mozilla.com)
 # ***** END LICENSE BLOCK *****
 from __future__ import absolute_import
-from metlog.senders.async_push.source import AsyncSender
-from metlog.senders.lazypirate.client import LazyPirateClient
-
-try:
-    import simplejson as json
-except ImportError:
-    import json  # NOQA
 
 import sys
 
 if 'gevent.monkey' in sys.modules:
     from gevent import queue as Queue
+    from gevent import monkey
+    monkey.patch_all()
 else:
     import Queue  # NOQA
 
@@ -35,6 +30,13 @@ try:
 except ImportError:
     zmq = None  # NOQA
 
+from metlog.senders.async_push.source import AsyncSender
+from metlog.senders.lazypirate.client import LazyPirateClient
+
+try:
+    import simplejson as json
+except ImportError:
+    import json  # NOQA
 
 # We need to set the maximum number of outbound messages so that
 # applications don't consume infinite memory if outbound messages are
@@ -60,7 +62,13 @@ class HandshakingClient(object):
         self.handshake_socket = None
         self.socket = None
 
-        # Socket to actually do PUSH/PULL
+        # Socket to actually do PUSH
+        # We need to run the sender as its own thread since the
+        # heartbeat must run as it's own thread.  When the heartbeat
+        # dies - *some* thread of control must close the sockets.
+        # The main thread can't do it since we don't have coroutines
+        # everywhere and there's now way to tell the main thread to go
+        # stop each of the 0mq sockets
         self.async_sender = AsyncSender(self.context, self.queue,
                 self.connect_bind, self.hwm)
 

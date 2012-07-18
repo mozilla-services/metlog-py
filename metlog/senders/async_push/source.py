@@ -1,14 +1,9 @@
-"""
-This is a dummy 0mq server that just read messages from the PUB/SUB
-interface
-"""
-import time
+from __future__ import absolute_import
 import sys
-import os
-import threading
-
 if 'gevent.monkey' in sys.modules:
     from gevent import queue as Queue
+    from gevent import monkey
+    monkey.patch_all()
 else:
     import Queue  # NOQA
 
@@ -19,6 +14,10 @@ try:
         import zmq  # NOQA
 except ImportError:
     zmq = None  # NOQA
+
+import time
+import os
+import threading
 
 
 class NullObject(object):
