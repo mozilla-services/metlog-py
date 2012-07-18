@@ -13,6 +13,13 @@
 # ***** END LICENSE BLOCK *****
 
 from __future__ import absolute_import
+import sys
+
+try:
+    import simplejson as json
+except:
+    import json  # NOQA
+
 import socket
 
 
@@ -27,4 +34,5 @@ class UdpSender(object):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
     def send_message(self, msg):
-        self.socket.sendto(msg, (self._host, self._port))
+        json_msg = json.dumps(msg)
+        self.socket.sendto(json_msg, self._host, self._port)
