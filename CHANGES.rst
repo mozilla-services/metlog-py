@@ -1,5 +1,13 @@
-0.9.3 - ????-??-??
+0.9.3 - 2012-07-18
 ==================
+
+- MetlogClient's `override` argument now accepts method name to override
+  instead of `True`.
+
+- Decorator tests now get the expected envelope version from the module source
+  code rather than hard coded in the tests.
+
+- Added udp sender.
 
 0.9.2 - 2012-06-22
 ==================
