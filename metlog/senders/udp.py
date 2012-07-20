@@ -13,7 +13,6 @@
 # ***** END LICENSE BLOCK *****
 
 from __future__ import absolute_import
-import sys
 
 try:
     import simplejson as json
@@ -35,4 +34,4 @@ class UdpSender(object):
 
     def send_message(self, msg):
         json_msg = json.dumps(msg)
-        self.socket.sendto(json_msg, self._host, self._port)
+        self.socket.sendto(json_msg, (self._host, self._port))

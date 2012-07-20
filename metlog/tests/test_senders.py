@@ -9,9 +9,11 @@
 #
 # Contributor(s):
 #   Rob Miller (rmiller@mozilla.com)
+#   Victor Ng (vng@mozilla.com)
 #
 # ***** END LICENSE BLOCK *****
 from metlog.client import SEVERITY
+from metlog.senders.udp import UdpSender
 from metlog.senders.dev import StdOutSender
 from metlog.senders.logging import StdLibLoggingSender
 from metlog.senders.zmq import ZmqPubSender, zmq
@@ -181,3 +183,23 @@ class TestLoggingSender(object):
         log.assert_any_call(logging.ERROR, 'this')
         log.assert_any_call(logging.INFO, 'that')
         log.assert_any_call(logging.DEBUG, 'the other')
+
+
+class TestUdpSender(object):
+    def _make_one(self, host='127.0.0.1', port=5565):
+        return UdpSender(host=host, port=port)
+
+    def setUp(self):
+        self.sender = self._make_one()
+        self.socket_patcher = patch.object(self.sender, 'socket')
+        self.mock_socket = self.socket_patcher.start()
+        self.msg = {'this': 'is',
+                    'a': 'test',
+                    'payload': 'PAYLOAD'}
+
+    def test_sender(self):
+        self.sender.send_message(self.msg)
+        eq_(self.mock_socket.sendto.call_count, 1)
+        write_args = self.mock_socket.sendto.call_args
+        assert write_args[0][1] == ('127.0.0.1', 5565)
+        assert json.loads(write_args[0][0]) == self.msg
