@@ -16,3 +16,11 @@ ZeroMQ
    :special-members:
 
 
+UDP
+===
+
+.. automodule:: metlog.senders.udp
+   :members:
+   :special-members:
+
+

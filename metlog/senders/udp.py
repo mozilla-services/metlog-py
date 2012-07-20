@@ -33,5 +33,10 @@ class UdpSender(object):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
     def send_message(self, msg):
+        """
+        Serialize and send a message off to the metlog listener.
+
+        :param msg: Dictionary representing the message.
+        """
         json_msg = json.dumps(msg)
         self.socket.sendto(json_msg, (self._host, self._port))
