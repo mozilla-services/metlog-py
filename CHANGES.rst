@@ -1,18 +1,16 @@
-0.9.4 - 2012-07-20
+0.9.4 - 2012-07-25
 ==================
 
-- Added a testcase against the UDP input plugin
-
+- Added a testcase against the UDP input plugin.
+- Fixed bug in socket.sendto function signature.
 
 0.9.3 - 2012-07-18
 ==================
 
 - MetlogClient's `override` argument now accepts method name to override
   instead of `True`.
-
 - Decorator tests now get the expected envelope version from the module source
   code rather than hard coded in the tests.
-
 - Added udp sender.
 
 0.9.2 - 2012-06-22
@@ -20,11 +18,9 @@
 
 - Plugin method names are now expected to be stored in the `metlog_name`
   attribute of the provided function rather than passed in separately.
-
 - 'oldstyle' messages now support string substitution using provided args and
   the `exc_info` keyword argument for slightly better stdlib logging
   compatibility.
-
 - ZeroMQ sender now uses gevent safe implementations of `Queue` class and `zmq`
   module if the gevent monkeypatches have been applied.
 
