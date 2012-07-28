@@ -313,7 +313,8 @@ class MetlogClient(object):
         if (len(args) == 1 and hasattr(args[0], 'keys')
             and hasattr(args[0], '__getitem__')):
             args = args[0]
-        msg = msg % args
+        if args:
+            msg = msg % args
         exc_info = kwargs.get('exc_info', False)
         if exc_info:
             if not isinstance(exc_info, tuple):
