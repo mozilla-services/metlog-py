@@ -23,6 +23,8 @@ one way (or not at all) when the decorator is originally evaluated, but then to
 be wrapped differently once the config has loaded and the desired final
 behavior has been established.
 """
+import functools
+
 from metlog.decorators.util import return_fq_name
 from metlog.holder import CLIENT_HOLDER
 try:
@@ -147,6 +149,14 @@ class MetlogDecorator(object):
             replacement = self._invoke
         self.__call__ = replacement
         return replacement(*args, **kwargs)
+
+    def __get__(self, instance, owner):
+        """Descriptor lookup logic to implement bound methods."""
+        # If accessed directly from the class, return the decorator itself.
+        if instance is None:
+            return self
+        # If accessed via an instance, bind it as the first argument.
+        return functools.partial(self, instance)
 
     @property
     def __name__(self):
