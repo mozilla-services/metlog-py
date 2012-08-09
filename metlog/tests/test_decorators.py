@@ -85,6 +85,33 @@ class TestCannedDecorators(DecoratorTestBase):
         eq_(msgs[0]['type'], 'counter')
         eq_(msgs[1]['type'], 'timer')
 
+    def test_decorating_methods_in_a_class(self):
+        class Stub(object):
+
+            def __init__(self, value):
+                self.value = value
+
+            @incr_count
+            @timeit
+            def get_value(self):
+                return self.value
+
+        stub = Stub(7)
+        eq_(stub.get_value(), 7)
+        msgs = [json.loads(m) for m in self.client.sender.msgs]
+        eq_(len(msgs), 2)
+
+        for msg in msgs:
+            expected = 'metlog.tests.test_decorators.get_value'
+            eq_(msg['fields']['name'], expected)
+
+        # First msg should be counter, then timer as decorators are
+        # applied inside to out, but execution is outside -> in
+        eq_(msgs[0]['type'], 'timer')
+        eq_(msgs[1]['type'], 'counter')
+
+        self.client.sender.msgs.clear()
+
 
 class TestDecoratorArgs(DecoratorTestBase):
     def test_arg_incr(self):
