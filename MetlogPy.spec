@@ -1,6 +1,6 @@
 %define name metlog-py
 %define pythonname MetlogPy
-%define version 0.9.4
+%define version 0.9.5
 %define unmangled_version %{version}
 %define release 0
 
@@ -15,7 +15,7 @@ BuildRoot: %{_tmppath}/%{pythonname}-%{version}-%{release}-buildroot
 Prefix: %{_prefix}
 BuildArch: noarch
 Vendor: Rob Miller <rmiller@mozilla.com>
-Requires: 
+Requires:
 Obsoletes:
 
 Url: https://github.com/mozilla-services/metlog-py

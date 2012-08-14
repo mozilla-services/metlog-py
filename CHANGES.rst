@@ -1,3 +1,10 @@
+0.9.5 - 2012-08-14
+==================
+
+- Properly handle 'self' arguments when decorators are used on a method.
+- Only apply string formatting to 'oldstyle' messages if string formatting args
+  are actually provided.
+
 0.9.4 - 2012-07-25
 ==================
 
