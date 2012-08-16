@@ -227,17 +227,22 @@ def test_handshake_sender_with_backend():
             call_args = mock_pool.send.call_args[0]
             eq_(call_args[0], expected)
 
+
 def test_plugin_override():
     cfg_txt = """
     [metlog]
     sender_class = metlog.senders.DebugCaptureSender
 
     [metlog_plugin_exception]
-    override=True
+    override=exception
     provider=metlog.tests.plugin:config_plugin
     """
     client = client_from_text_config(cfg_txt, 'metlog')
-    eq_('dummy', client.dummy.metlog_name)
+    eq_('dummy', client.exception.metlog_name)
+
+    # The client.exception method should really be a chain
+    # that writes to both the DebugCaptureSender
+    client.exception('blah blah')
 
     cfg_txt = """
     [metlog]

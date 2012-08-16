@@ -111,6 +111,35 @@ class _Timer(object):
         return False
 
 
+class MethodChain(object):
+    def __init__(self, root_method, dynamic_methods, method_name):
+        self._root_method = root_method
+        self._dynamic_methods = dynamic_methods
+        self._name = method_name
+
+    @property
+    def metlog_name(self):
+        return self._dynamic_methods[self._name][-1].metlog_name
+
+    def __call__(self, *args, **kwargs):
+        result = None
+        for meth in self._dynamic_methods[self._name]:
+            try:
+                result = meth(*args, **kwargs)
+            except Exception:
+                exc_info = sys.exc_info()
+                tb_lines = traceback.format_exception(exc_info[0], exc_info[1],
+                                                  exc_info[2])
+
+                msg = "Error while executing method chain.\n"
+                msg += ''.join(tb_lines)
+                sys.stderr.write(msg)
+
+            if self._root_method:
+                result = self._root_method(*args, **kwargs)
+        return result
+
+
 class MetlogClient(object):
     """
     Client class encapsulating metlog API, and providing storage for default
@@ -195,7 +224,7 @@ class MetlogClient(object):
                          override. False indicates no override will
                          occur.
         """
-        assert isinstance(method, types.FunctionType)
+        assert callable(method)
 
         # Obtain the metlog name directly from the method
         name = method.metlog_name
@@ -206,9 +235,17 @@ class MetlogClient(object):
             msg = "The name [%s] is already in use" % name
             raise SyntaxError(msg)
 
-        self._dynamic_methods[name] = method
+        if name not in self._dynamic_methods:
+            # Initial setup of the method chain
+            self._dynamic_methods[name] = []
+            orig_method = getattr(self, name, None)
+            chain = MethodChain(orig_method,
+                    self._dynamic_methods,
+                    name)
+            setattr(self, name, chain)
+
         meth = types.MethodType(method, self, self.__class__)
-        setattr(self, name, meth)
+        self._dynamic_methods[name].append(meth)
 
     def metlog(self, type, timestamp=None, logger=None, severity=None,
                payload='', fields=None):

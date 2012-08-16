@@ -16,26 +16,31 @@ configuration for the plugin.
 """
 METLOG_PLUGIN_NAME = 'dummy'
 
-def config_plugin(config_dict):
-    # Normally, the config_dict is unwrapped to get
-    # some variables that can be used in the closure
-    # to disable features
-    default_verbose = config_dict.pop('verbose', False)
+import copy
 
-    import copy
-    mycopy = copy.deepcopy(config_dict)
 
-    def my_plugin(self, *args, **kwargs):
+class CallableMethod(object):
+    def __init__(self, default_verbose, config_dict):
+        self._default_verbose = config_dict.pop('verbose', False)
+        self._mycopy = copy.deepcopy(config_dict)
+
+    def __call__(self, *args, **kwargs):
         # Most real plugin methods will use the variables captured in the
         # config_dict to override arguments passed in by the developer through
         # *args and **kwargs.  This allows operations to disable specific
         # features of metlog without having to deploy new code.
 
-        if not (default_verbose and kwargs.get('verbose', False)):
-            # Just skip early if any verbose flag has been set to False
-            return
-        return mycopy
+        self._args = args
+        self._kwargs = args
+        return self._mycopy
 
+
+def config_plugin(config_dict):
+    # Normally, the config_dict is unwrapped to get
+    # some variables that can be used in the closure
+    # to disable features
+    default_verbose = config_dict.pop('verbose', False)
+    my_plugin = CallableMethod(default_verbose, config_dict)
     my_plugin.metlog_name = METLOG_PLUGIN_NAME
 
     return my_plugin
