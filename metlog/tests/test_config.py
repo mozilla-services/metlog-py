@@ -242,7 +242,13 @@ def test_plugin_override():
 
     # The client.exception method should really be a chain
     # that writes to both the DebugCaptureSender
+    assert len(client.sender.msgs) == 0
     client.exception('blah blah')
+
+    # The debugCapture should get a message
+    assert len(client.sender.msgs) == 1 
+    # The dummy plugin should also capture *args and **kwargs
+    assert 'blah blah' == client.exception._dynamic_methods['exception'][0]._args[-1]
 
     cfg_txt = """
     [metlog]
