@@ -131,11 +131,11 @@ class MetlogDecorator(object):
         if hasattr(self._fn, '_metlog_decorators'):
             self._metlog_decorators.update(self._fn._metlog_decorators)
 
-    def __call__(self, *args, **kwargs):
+    def _real_call(self, *args, **kwargs):
         """
         Sorta dirty stuff happening in here. The first time the wrapped
-        function is called, this method will replace itself, so that later
-        calls to the wrapped function will invoke a different decorator.
+        function is called, this method will replace itself. That means this
+        code should only run once per decorated function.
         """
         if (self._fn is None and len(args) == 1 and len(kwargs) == 0
             and callable(args[0])):
@@ -147,8 +147,11 @@ class MetlogDecorator(object):
             replacement = self.metlog_call
         else:
             replacement = self._invoke
-        self.__call__ = replacement
+        self._real_call = replacement
         return replacement(*args, **kwargs)
+
+    def __call__(self, *args, **kwargs):
+        return self._real_call(*args, **kwargs)
 
     def __get__(self, instance, owner):
         """Descriptor lookup logic to implement bound methods."""
