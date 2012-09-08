@@ -63,7 +63,7 @@ class MetlogDecorator(object):
         else:
             # we're instantiated w/ arguments that will need to be passed on to
             # the actual metlog call
-            self.args = args[1:]
+            self.args = args
             self.kwargs = kwargs
             self.set_fn(None)
 

@@ -62,13 +62,26 @@ class TestCannedDecorators(DecoratorTestBase):
         msgs = [json.loads(m) for m in self.client.sender.msgs]
         eq_(len(msgs), 1)
 
+    def test_passed_decorator_args(self):
+        name = 'different.timer.name'
+
+        @timeit(name)
+        def timed_fn(x, y):
+            return x + y
+
+        eq_(timed_fn(3, 5), 8)
+        msgs = [json.loads(m) for m in self.client.sender.msgs]
+        msg = msgs[-1]
+        eq_(msg['type'], 'timer')
+        eq_(msg['fields']['name'], name)
+
     def test_decorator_ordering(self):
         @incr_count
         @timeit
         def ordering_1(x, y):
             return x + y
 
-        ordering_1(5, 6)
+        eq_(ordering_1(5, 6), 11)
         msgs = [json.loads(m) for m in self.client.sender.msgs]
         eq_(len(msgs), 2)
 
