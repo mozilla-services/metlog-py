@@ -186,20 +186,48 @@ class TestLoggingSender(object):
 
 
 class TestUdpSender(object):
-    def _make_one(self, host='127.0.0.1', port=5565):
+    def _make_one(self, host, port):
         return UdpSender(host=host, port=port)
 
-    def setUp(self):
-        self.sender = self._make_one()
+    def _init_sender(self, host='127.0.0.1', port=5565):
+        self.sender = self._make_one(host, port)
         self.socket_patcher = patch.object(self.sender, 'socket')
         self.mock_socket = self.socket_patcher.start()
         self.msg = {'this': 'is',
                     'a': 'test',
                     'payload': 'PAYLOAD'}
 
+    def tearDown(self):
+        self.socket_patcher.stop()
+
     def test_sender(self):
+        self._init_sender()
         self.sender.send_message(self.msg)
         eq_(self.mock_socket.sendto.call_count, 1)
         write_args = self.mock_socket.sendto.call_args
-        assert write_args[0][1] == ('127.0.0.1', 5565)
-        assert json.loads(write_args[0][0]) == self.msg
+        eq_(json.loads(write_args[0][0]), self.msg)
+        eq_(write_args[0][1], ('127.0.0.1', 5565))
+
+    def test_sender_multiple(self):
+        hosts = ['127.0.0.1', '127.0.0.2']
+        ports = [5565, 5566]
+        self._init_sender(host=hosts, port=ports)
+        self.sender.send_message(self.msg)
+        eq_(self.mock_socket.sendto.call_count, 2)
+        write_args = self.mock_socket.sendto.call_args_list
+        eq_(json.loads(write_args[0][0][0]), self.msg)
+        eq_(write_args[0][0][1], (hosts[0], ports[0]))
+        eq_(json.loads(write_args[1][0][0]), self.msg)
+        eq_(write_args[1][0][1], (hosts[1], ports[1]))
+
+    def test_sender_multiple_fewer_ports(self):
+        hosts = ['127.0.0.1', '127.0.0.2']
+        port = 5565
+        self._init_sender(host=hosts, port=port)
+        self.sender.send_message(self.msg)
+        eq_(self.mock_socket.sendto.call_count, 2)
+        write_args = self.mock_socket.sendto.call_args_list
+        eq_(json.loads(write_args[0][0][0]), self.msg)
+        eq_(write_args[0][0][1], (hosts[0], port))
+        eq_(json.loads(write_args[1][0][0]), self.msg)
+        eq_(write_args[1][0][1], (hosts[1], port))
