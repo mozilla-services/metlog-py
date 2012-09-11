@@ -154,7 +154,7 @@ def client_from_dict_config(config, client=None, clear_global=False):
     """
     # Make a deep copy of the configuration so that subsequent uses of
     # the config won't blow up
-    config = copy.deepcopy(nest_prefixes(config))
+    config = nest_prefixes(copy.deepcopy(config))
 
     sender_config = config.get('sender', {})
     logger = config.get('logger', '')
