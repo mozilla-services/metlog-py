@@ -17,6 +17,7 @@ from metlog.path import DottedNameResolver
 from textwrap import dedent
 import ConfigParser
 import StringIO
+import copy
 import os
 import re
 
@@ -151,7 +152,9 @@ def client_from_dict_config(config, client=None, clear_global=False):
       All remaining key-value pairs in the sender config dict will be passed as
       keyword arguments to the sender constructor.
     """
-    config = nest_prefixes(config)
+    # Make a deep copy of the configuration so that subsequent uses of
+    # the config won't blow up
+    config = copy.deepcopy(nest_prefixes(config))
 
     sender_config = config.get('sender', {})
     logger = config.get('logger', '')
