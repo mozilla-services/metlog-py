@@ -1,5 +1,8 @@
-0.9.6 - ????-??-??
+0.9.6 - 2012-09-11
 ==================
+
+- Couple of bug fixed in decorator base class.
+- Added support for UdpSender to have multiple listener hosts.
 
 
 0.9.5 - 2012-08-14
