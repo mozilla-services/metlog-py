@@ -14,6 +14,7 @@
 from metlog.exceptions import EnvironmentNotFoundError
 from metlog.client import MetlogClient
 from metlog.config import client_from_text_config
+from metlog.config import client_from_dict_config
 from metlog.senders import DebugCaptureSender
 from mock import Mock
 from mock import patch
@@ -227,6 +228,7 @@ def test_handshake_sender_with_backend():
             call_args = mock_pool.send.call_args[0]
             eq_(call_args[0], expected)
 
+
 def test_plugin_override():
     cfg_txt = """
     [metlog]
@@ -247,3 +249,13 @@ def test_plugin_override():
     """
     # Failure to set an override argument will throw an exception
     assert_raises(SyntaxError, client_from_text_config, cfg_txt, 'metlog')
+
+
+def test_load_config_multiple_times():
+    cfg = {'logger': 'addons-marketplace-dev',
+           'sender': {'class': 'metlog.senders.UdpSender',
+           'host': ['logstash1', 'logstash2'],
+           'port': '5566'}}
+
+    client_from_dict_config(cfg)
+    client_from_dict_config(cfg)
