@@ -1,3 +1,9 @@
+0.9.7 - 2012-09-11
+==================
+
+- Fixed a bug where `client_from_dict_config` would mutate the input
+  configuration causing subsequent use of the configuration to fail.
+
 0.9.6 - 2012-09-11
 ==================
 
