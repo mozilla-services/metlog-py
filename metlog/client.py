@@ -184,7 +184,12 @@ class MetlogClient(object):
         for filter_fn in self.filters:
             if not filter_fn(msg):
                 return
-        self.sender.send_message(msg)
+        try:
+            self.sender.send_message(msg)
+        except StandardError:
+            sys.stderr.write("Error sending message : [%s]" %
+                    unicode(str(msg), errors='ignore'))
+            return
 
     def add_method(self, method, override=False):
         """

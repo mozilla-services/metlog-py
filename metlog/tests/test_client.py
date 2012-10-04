@@ -18,6 +18,7 @@ from mock import Mock
 from nose.tools import eq_, ok_
 from metlog.senders.dev import DebugCaptureSender
 
+import StringIO
 import os
 import socket
 import sys
@@ -318,3 +319,34 @@ class TestDisabledTimer(object):
         foo2()
 
         eq_(len(self.mock_sender.msgs), 0)
+
+
+class TestUnicode(object):
+    logger = 'tests'
+    timer_name = 'test'
+
+    def setUp(self):
+        self.mock_sender = Mock()
+        self.mock_sender.send_message.side_effect = UnicodeError()
+        self.client = MetlogClient(self.mock_sender, self.logger)
+        # overwrite the class-wide threadlocal w/ an instance one
+        # so values won't persist btn tests
+        self.timer_ob = self.client.timer(self.timer_name)
+        self.timer_ob.__dict__['_local'] = threading.local()
+
+        self.old_stderr = sys.stderr
+        sys.stderr = StringIO.StringIO()
+
+    def tearDown(self):
+        del self.timer_ob.__dict__['_local']
+        del self.mock_sender
+        sys.stderr = self.old_stderr
+
+    def test_bad_encode(self):
+        msg = {'this': 'is',
+                    'a': 'test',
+                    'payload': '\xfa121a1'}
+        self.client.send_message(msg)
+        sys.stderr.seek(0)
+        err = sys.stderr.read()
+        assert 'Error sending' in err
