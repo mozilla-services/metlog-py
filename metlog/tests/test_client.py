@@ -329,7 +329,8 @@ class TestUnicode(object):
 
     def setUp(self):
         self.mock_sender = Mock()
-        self.mock_sender.send_message.side_effect = UnicodeError("UnicodeError encoding user data")
+        self.mock_sender.send_message.side_effect = \
+                UnicodeError("UnicodeError encoding user data")
         self.client = MetlogClient(self.mock_sender, self.logger)
         # overwrite the class-wide threadlocal w/ an instance one
         # so values won't persist btn tests
@@ -349,4 +350,4 @@ class TestUnicode(object):
         self.client.send_message(msg)
         sys.stderr.seek(0)
         err = sys.stderr.read()
-        assert 'Error sending' in err
+        ok_('Error sending' in err)
