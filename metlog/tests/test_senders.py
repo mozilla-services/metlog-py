@@ -285,7 +285,7 @@ class TestUDPUnicode(object):
         self.sender.send_message(msg)
         sys.stderr.seek(0)
         err = sys.stderr.read()
-        assert err == ''
+        eq_(err, '')
 
         eq_(self.mock_socket.sendto.call_count, 1)
         write_args = self.mock_socket.sendto.call_args_list
@@ -296,7 +296,7 @@ class TestUDPUnicode(object):
         self.sender.send_message(msg)
         sys.stderr.seek(0)
         err = sys.stderr.read()
-        assert err == ''
+        eq_(err, '')
 
         eq_(self.mock_socket.sendto.call_count, 1)
         write_args = self.mock_socket.sendto.call_args_list
@@ -314,7 +314,7 @@ class TestUDPUnicode(object):
         self.sender.send_message(msg)
         sys.stderr.seek(0)
         err = sys.stderr.read()
-        assert err == ''
+        eq_(err, '')
 
         eq_(self.mock_socket.sendto.call_count, 1)
         write_args = self.mock_socket.sendto.call_args_list
@@ -327,7 +327,7 @@ class TestUDPUnicode(object):
         self.sender.send_message(msg)
         sys.stderr.seek(0)
         err = sys.stderr.read()
-        assert '' == err
+        eq_('', err)
 
     def test_bug_73442(self):
         """
@@ -338,7 +338,7 @@ class TestUDPUnicode(object):
         self.sender.send_message(msg)
         sys.stderr.seek(0)
         err = sys.stderr.read()
-        assert err == ''
+        eq_(err, '')
 
         eq_(self.mock_socket.sendto.call_count, 1)
         write_args = self.mock_socket.sendto.call_args_list
@@ -349,7 +349,7 @@ class TestUDPUnicode(object):
         self.sender.send_message(u"User (%s)" % msg)
         sys.stderr.seek(0)
         err = sys.stderr.read()
-        assert err == ''
+        eq_(err, '')
         eq_(self.mock_socket.sendto.call_count, 1)
         write_args = self.mock_socket.sendto.call_args_list
         eq_(json.loads(write_args[0][0][0]), u"User (%s)" % msg)
