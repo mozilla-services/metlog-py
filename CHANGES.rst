@@ -1,3 +1,11 @@
+0.9.8 - ????-??-??
+==================
+
+- MetlogClient now accepts single string values for the `disabled_timers`
+  argument.
+- Fixed bug where timer wouldn't be disabled if the function name didn't match
+  the timer name.
+
 0.9.7 - 2012-09-11
 ==================
 

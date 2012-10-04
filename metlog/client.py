@@ -161,6 +161,8 @@ class MetlogClient(object):
 
         if disabled_timers is None:
             self._disabled_timers = set()
+        elif isinstance(disabled_timers, types.StringTypes):
+            self._disabled_timers = set([disabled_timers])
         else:
             self._disabled_timers = set(disabled_timers)
         if filters is None:
