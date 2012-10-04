@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 # ***** BEGIN LICENSE BLOCK *****
 # This Source Code Form is subject to the terms of the Mozilla Public
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
@@ -327,7 +329,7 @@ class TestUnicode(object):
 
     def setUp(self):
         self.mock_sender = Mock()
-        self.mock_sender.send_message.side_effect = UnicodeError()
+        self.mock_sender.send_message.side_effect = UnicodeError("UnicodeError encoding user data")
         self.client = MetlogClient(self.mock_sender, self.logger)
         # overwrite the class-wide threadlocal w/ an instance one
         # so values won't persist btn tests
@@ -342,10 +344,8 @@ class TestUnicode(object):
         del self.mock_sender
         sys.stderr = self.old_stderr
 
-    def test_bad_encode(self):
-        msg = {'this': 'is',
-                    'a': 'test',
-                    'payload': '\xfa121a1'}
+    def test_unicode_failure(self):
+        msg = "mock will raise unicode error here"
         self.client.send_message(msg)
         sys.stderr.seek(0)
         err = sys.stderr.read()

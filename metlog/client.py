@@ -188,9 +188,15 @@ class MetlogClient(object):
                 return
         try:
             self.sender.send_message(msg)
-        except StandardError:
-            sys.stderr.write("Error sending message : [%s]" %
-                    unicode(str(msg), errors='ignore'))
+        except StandardError, e:
+            if isinstance(msg, unicode):
+                unicode_msg = msg
+            else:
+                unicode_msg = unicode(str(msg), errors='ignore')
+
+            err_msg = "Error sending message (%s): [%s]" % \
+                    (repr(e), unicode_msg.encode("utf8"))
+            sys.stderr.write(err_msg)
             return
 
     def add_method(self, method, override=False):
