@@ -158,7 +158,7 @@ def test_plugins_config():
     expected = {'host': 'lolcathost',
      'foo': 'bar', 'some_list': ['dog', 'cat', 'bus'],
      'port': 8080}
-    assert actual == expected
+    eq_(actual, expected)
 
 
 def test_handshake_sender_no_backend():

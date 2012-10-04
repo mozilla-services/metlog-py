@@ -19,12 +19,14 @@ from metlog.senders.logging import StdLibLoggingSender
 from metlog.senders.zmq import ZmqPubSender, zmq
 from mock import patch
 from nose.plugins.skip import SkipTest
-from nose.tools import eq_
+from nose.tools import eq_, raises
 
+import sys
 import json
 import logging
 import threading
 import time
+import StringIO
 
 
 class TestZmqPubSender(object):
@@ -231,3 +233,123 @@ class TestUdpSender(object):
         eq_(write_args[0][0][1], (hosts[0], port))
         eq_(json.loads(write_args[1][0][0]), self.msg)
         eq_(write_args[1][0][1], (hosts[1], port))
+
+
+class TestUDPUnicode(object):
+    def setup(self):
+        self._init_sender()
+        self.old_stderr = sys.stderr
+        sys.stderr = StringIO.StringIO()
+
+    def _make_one(self, host, port):
+        return UdpSender(host=host, port=port)
+
+    def _init_sender(self, host='127.0.0.1', port=5565):
+        self.sender = self._make_one(host, port)
+        self.socket_patcher = patch.object(self.sender, 'socket')
+        self.mock_socket = self.socket_patcher.start()
+
+    def tearDown(self):
+        self.socket_patcher.stop()
+        sys.stderr = self.old_stderr
+
+    @raises(UnicodeError)
+    def test_bad_bytes(self):
+        msg = "\xfa121a1"
+        self.sender.send_message(msg)
+
+    @raises(UnicodeError)
+    def test_bad_struct(self):
+        msg = {'this': 'is',
+                    'a': 'test',
+                    'payload': "\xfa121a1"}
+        self.sender.send_message(msg)
+
+    @raises(UnicodeError)
+    def test_mixed_bad_bytes(self):
+        msg = u"\u30c0".encode('utf8') + "\xfa121a1" + u"\u30c1".encode('utf8')
+        self.sender.send_message(msg)
+
+    @raises(UnicodeError)
+    def test_mixed_bad_byte_struct(self):
+        bad_bytes = u"\u30c0".encode('utf8') + \
+                "\xfa121a1" + \
+                u"\u30c1".encode('utf8')
+        msg = {'this': 'is',
+                    'a': 'test',
+                    'payload': bad_bytes}
+        self.sender.send_message(msg)
+
+    def test_japanese(self):
+        msg = u"\u30c0\u30c1\u30c2"
+        self.sender.send_message(msg)
+        sys.stderr.seek(0)
+        err = sys.stderr.read()
+        eq_(err, '')
+
+        eq_(self.mock_socket.sendto.call_count, 1)
+        write_args = self.mock_socket.sendto.call_args_list
+        eq_(json.loads(write_args[0][0][0]), msg)
+
+    def test_japanese_utf8(self):
+        msg = u"\u30c0\u30c1\u30c2".encode('utf8')
+        self.sender.send_message(msg)
+        sys.stderr.seek(0)
+        err = sys.stderr.read()
+        eq_(err, '')
+
+        eq_(self.mock_socket.sendto.call_count, 1)
+        write_args = self.mock_socket.sendto.call_args_list
+
+        # JSON serialization will encode UTF8 or real unicode strings
+        # the same way, so on deserialization, you will always get
+        # actual unicode strings
+        eq_(json.loads(write_args[0][0][0]), msg.decode('utf8'))
+
+    def test_japanese_struct(self):
+        msg = {'this': 'is',
+                    'a': 'test',
+                    'payload': u"\u30c0\u30c1\u30c2"}
+
+        self.sender.send_message(msg)
+        sys.stderr.seek(0)
+        err = sys.stderr.read()
+        eq_(err, '')
+
+        eq_(self.mock_socket.sendto.call_count, 1)
+        write_args = self.mock_socket.sendto.call_args_list
+        eq_(json.loads(write_args[0][0][0]), msg)
+
+    def test_japanese_struct_utf8(self):
+        msg = {'this': 'is',
+                    'a': 'test',
+                    'payload': u"\u30c0\u30c1\u30c2".encode("utf8")}
+        self.sender.send_message(msg)
+        sys.stderr.seek(0)
+        err = sys.stderr.read()
+        eq_('', err)
+
+    def test_bug_73442(self):
+        """
+        This reuses actual data which caused bug 73442
+        """
+        msg = u'bukan\xfdrka'
+
+        self.sender.send_message(msg)
+        sys.stderr.seek(0)
+        err = sys.stderr.read()
+        eq_(err, '')
+
+        eq_(self.mock_socket.sendto.call_count, 1)
+        write_args = self.mock_socket.sendto.call_args_list
+        eq_(json.loads(write_args[0][0][0]), msg)
+
+    def test_bug_73442_long_msg(self):
+        msg = u'bukan\xfdrka'
+        self.sender.send_message(u"User (%s)" % msg)
+        sys.stderr.seek(0)
+        err = sys.stderr.read()
+        eq_(err, '')
+        eq_(self.mock_socket.sendto.call_count, 1)
+        write_args = self.mock_socket.sendto.call_args_list
+        eq_(json.loads(write_args[0][0][0]), u"User (%s)" % msg)
