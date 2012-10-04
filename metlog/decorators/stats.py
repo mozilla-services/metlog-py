@@ -21,7 +21,8 @@ class timeit(MetlogDecorator):
     """
     def predicate(self):
         client = self.client
-        if (self._fn.__name__ in client._disabled_timers or
+        timer_name = self.args[0] if self.args else self._fn.__name__
+        if (timer_name in client._disabled_timers or
             '*' in client._disabled_timers):
             return False
         return super(timeit, self).predicate()
