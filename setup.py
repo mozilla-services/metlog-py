@@ -39,6 +39,7 @@ setup(name='metlog-py',
       zip_safe=False,
       install_requires=[
           # -*- Extra requirements: -*-
+          'docopt',
           ],
       extras_require={
           'zeromqpub': ['pyzmq'],
@@ -49,5 +50,8 @@ setup(name='metlog-py',
           'pyzmq',
           ],
       entry_points={
+          'console_scripts': [
+              'mb = metlog.command:mb',
+              ],
           },
       )
