@@ -164,7 +164,7 @@ def test_plugins_config():
 def test_handshake_sender_no_backend():
     cfg_txt = """
     [metlog]
-    sender_class = metlog.senders.ZmqHandshakePubSender
+    sender_class = metlog.senders.zmq.ZmqHandshakePubSender
     sender_handshake_bind = tcp://localhost:5180
     sender_connect_bind = tcp://localhost:5190
     sender_handshake_timeout = 200
@@ -187,7 +187,7 @@ def test_handshake_sender_no_backend():
 def test_handshake_sender_with_backend():
     cfg_txt = """
     [metlog]
-    sender_class = metlog.senders.ZmqHandshakePubSender
+    sender_class = metlog.senders.zmq.ZmqHandshakePubSender
     sender_handshake_bind = tcp://localhost:5180
     sender_connect_bind = tcp://localhost:5190
     sender_handshake_timeout = 200

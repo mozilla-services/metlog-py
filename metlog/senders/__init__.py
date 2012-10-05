@@ -16,8 +16,6 @@ from metlog.senders.dev import StdOutSender  # NOQA
 from metlog.senders.dev import StreamSender  # NOQA
 from metlog.senders.dev import DebugCaptureSender  # NOQA
 from metlog.senders.udp import UdpSender  # NOQA
-from metlog.senders.zmq import ZmqPubSender  # NOQA
-from metlog.senders.zmq import ZmqHandshakePubSender  # NOQA
 
 
 class NoSendSender(object):
