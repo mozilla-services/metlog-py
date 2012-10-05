@@ -1,10 +1,14 @@
-0.9.8 - ????-??-??
+0.9.8 - 2012-10-05
 ==================
 
 - MetlogClient now accepts single string values for the `disabled_timers`
   argument.
 - Fixed bug where timer wouldn't be disabled if the function name didn't match
   the timer name.
+- Added better error handling for invalid unicode. Unserializable
+  messages will now get routed to stderr
+- A new metlog benchmark command line utility (mb) is now included
+
 
 0.9.7 - 2012-09-11
 ==================
