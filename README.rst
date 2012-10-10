@@ -2,7 +2,7 @@
 metlog-py
 =========
 
-.. image:: https://secure.travis-ci.org/metlog-py/metlog-py.png
+.. image:: https://secure.travis-ci.org/mozilla-services/metlog-py.png
 
 metlog-py is a Python client for the "Metlog" system of application logging and
 metrics gathering developed by the `Mozilla Services
