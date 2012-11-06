@@ -11,6 +11,7 @@
 #   Rob Miller (rmiller@mozilla.com)
 #
 # ***** END LICENSE BLOCK *****
+
 try:
     import simplejson as json
 except ImportError:
@@ -18,13 +19,14 @@ except ImportError:
 import sys
 
 from metlog.path import resolve_name
+from metlog.senders import encoders
 
 
 class StreamSender(object):
     """
     Emits messages to a provided stream object.
     """
-    def __init__(self, stream, formatter=None):
+    def __init__(self, stream, formatter=encoders.default_encoder):
         """
         :param stream: Stream object to which the messages should be written.
         :param formatter: Optional callable (or dotted name identifier) that
@@ -33,23 +35,15 @@ class StreamSender(object):
         """
         self.stream = stream
         if formatter is None:
-            self.formatter = self.default_formatter
-        else:
-            if not callable(formatter):
-                formatter = resolve_name(formatter)
-            self.formatter = formatter
-
-    def default_formatter(self, msg):
-        """
-        Default formatter, just converts the message to 4-space-indented
-        JSON.
-        """
-        return json.dumps(msg, indent=4)
+            formatter = encoders.default_encoder
+        if not callable(formatter):
+            formatter = resolve_name(formatter)
+        self.formatter = formatter
 
     def send_message(self, msg):
         """Deliver message to the stream object."""
         output = self.formatter(msg)
-        self.stream.write('%s\n' % output)
+        self.stream.write(output)
         self.stream.flush()
 
 
@@ -60,6 +54,12 @@ class StdOutSender(StreamSender):
     def __init__(self, *args, **kwargs):
         super(StdOutSender, self).__init__(sys.stdout, *args, **kwargs)
 
+    def send_message(self, msg):
+        """Deliver message to the stream object."""
+        output = self.formatter(msg) + "\n"
+        self.stream.write(output)
+        self.stream.flush()
+
 
 class FileSender(StreamSender):
     """
@@ -68,6 +68,12 @@ class FileSender(StreamSender):
     def __init__(self, filepath, *args, **kwargs):
         filestream = open(filepath, 'a')
         super(FileSender, self).__init__(filestream, *args, **kwargs)
+
+    def send_message(self, msg):
+        """Deliver message to the stream object."""
+        output = self.formatter(msg) + "\n"
+        self.stream.write(output)
+        self.stream.flush()
 
 
 class DebugCaptureSender(object):

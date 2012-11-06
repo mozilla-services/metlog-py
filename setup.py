@@ -47,6 +47,7 @@ setup(name='metlog-py',
       tests_require=[
           'nose',
           'mock',
+          'msgpack-python',
           'pyzmq',
           ],
       entry_points={

@@ -17,6 +17,7 @@ from metlog.senders.udp import UdpSender
 from metlog.senders.dev import StdOutSender
 from metlog.senders.logging import StdLibLoggingSender
 from metlog.senders.zmq import ZmqPubSender, zmq
+from metlog.senders import encoders
 from mock import patch
 from nose.plugins.skip import SkipTest
 from nose.tools import eq_, raises
@@ -188,11 +189,12 @@ class TestLoggingSender(object):
 
 
 class TestUdpSender(object):
-    def _make_one(self, host, port):
-        return UdpSender(host=host, port=port)
+    def _make_one(self, host, port, encoder):
+        return UdpSender(host=host, port=port, formatter=encoder)
 
-    def _init_sender(self, host='127.0.0.1', port=5565):
-        self.sender = self._make_one(host, port)
+    def _init_sender(self, host='127.0.0.1', port=5565,
+            encoder=encoders.json_encoder):
+        self.sender = self._make_one(host, port, encoder)
         self.socket_patcher = patch.object(self.sender, 'socket')
         self.mock_socket = self.socket_patcher.start()
         self.msg = {'this': 'is',
@@ -233,6 +235,22 @@ class TestUdpSender(object):
         eq_(write_args[0][0][1], (hosts[0], port))
         eq_(json.loads(write_args[1][0][0]), self.msg)
         eq_(write_args[1][0][1], (hosts[1], port))
+
+    def test_default_encoder_is_json(self):
+        self._init_sender()
+        self.sender.send_message(self.msg)
+        eq_(self.mock_socket.sendto.call_count, 1)
+        write_args = self.mock_socket.sendto.call_args
+        eq_(encoders.json_decoder(write_args[0][0]), self.msg)
+        eq_(write_args[0][1], ('127.0.0.1', 5565))
+
+    def test_msgpack_encoder(self):
+        self._init_sender(encoder=encoders.msgpack_encoder)
+        self.sender.send_message(self.msg)
+        eq_(self.mock_socket.sendto.call_count, 1)
+        write_args = self.mock_socket.sendto.call_args
+        eq_(encoders.msgpack_decoder(write_args[0][0]), self.msg)
+        eq_(write_args[0][1], ('127.0.0.1', 5565))
 
 
 class TestUDPUnicode(object):

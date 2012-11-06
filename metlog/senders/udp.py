@@ -15,20 +15,15 @@
 from __future__ import absolute_import
 from types import StringTypes
 
-try:
-    import simplejson as json
-except:
-    import json  # NOQA
-
 import socket
-
+from metlog.senders import encoders
 
 class UdpSender(object):
     """
     Sends metlog messages out via a UDP socket.
     """
 
-    def __init__(self, host, port):
+    def __init__(self, host, port, formatter=encoders.default_encoder):
         """
         Create UdpSender object.
 
@@ -41,6 +36,7 @@ class UdpSender(object):
                      be repeated for each extra host. If there are extra ports
                      they will be truncated and ignored.
         """
+        self.formatter = formatter
         if isinstance(host, StringTypes):
             host = [host]
         if isinstance(port, int):
@@ -57,6 +53,8 @@ class UdpSender(object):
 
         :param msg: Dictionary representing the message.
         """
-        json_msg = json.dumps(msg)
+        encoded_msg = self.formatter(msg)
         for host, port in self._destinations:
-            self.socket.sendto(json_msg, (host, port))
+            self.socket.sendto(encoded_msg, (host, port))
+
+
