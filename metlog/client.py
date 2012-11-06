@@ -22,7 +22,6 @@ import threading
 import time
 import traceback
 import types
-import pytz
 
 from datetime import datetime
 from functools import wraps
