@@ -192,7 +192,7 @@ class MetlogClient(object):
             unicode_msg = unicode(str(msg), errors='ignore')
 
             err_msg = "Error sending message (%s): [%s]" % \
-                    (repr(e), unicode_msg.encode("utf8"))
+                      (repr(e), unicode_msg.encode("utf8"))
             sys.stderr.write(err_msg)
             return
 
@@ -220,25 +220,22 @@ class MetlogClient(object):
         meth = types.MethodType(method, self, self.__class__)
         setattr(self, name, meth)
 
-    def metlog(self, type, timestamp=None, logger=None, severity=None,
-               payload='', fields=None):
+    def metlog(self, type, logger=None, severity=None, payload='',
+               fields=None):
         """
         Create a single message and pass it to the sender for delivery.
 
         :param type: String token identifying the type of message payload.
-        :param timestamp: Time at which the message is generated.
         :param logger: String token identifying the message generator.
         :param severity: Numerical code (0-7) for msg severity, per RFC 5424.
         :param payload: Actual message contents.
         :param fields: Arbitrary key/value pairs for add'l metadata.
         """
-        timestamp = timestamp if timestamp is not None else datetime.utcnow()
         logger = logger if logger is not None else self.logger
         severity = severity if severity is not None else self.severity
         fields = fields if fields is not None else dict()
+        timestamp = "%sZ" % datetime.utcnow().isoformat()
 
-        if hasattr(timestamp, 'isoformat'):
-            timestamp = timestamp.isoformat()
         full_msg = dict(type=type, timestamp=timestamp, logger=logger,
                         severity=severity, payload=payload, fields=fields,
                         env_version=self.env_version,
@@ -246,14 +243,12 @@ class MetlogClient(object):
                         metlog_hostname=self.hostname)
         self.send_message(full_msg)
 
-    def timer(self, name, timestamp=None, logger=None, severity=None,
-              fields=None, rate=1.0):
+    def timer(self, name, logger=None, severity=None, fields=None, rate=1.0):
         """
         Return a timer object that can be used as a context manager or a
         decorator, generating a metlog 'timer' message upon exit.
 
         :param name: Required string label for the timer.
-        :param timestamp: Time at which the message is generated.
         :param logger: String token identifying the message generator.
         :param severity: Numerical code (0-7) for msg severity, per RFC 5424.
         :param fields: Arbitrary key/value pairs for add'l metadata.
@@ -265,8 +260,8 @@ class MetlogClient(object):
         if ((self._disabled_timers.intersection(set(['*', name]))) or
             (rate < 1.0 and random.random() >= rate)):
             return self._noop_timer
-        msg_data = dict(timestamp=timestamp, logger=logger, severity=severity,
-                        fields=fields, rate=rate)
+        msg_data = dict(logger=logger, severity=severity, fields=fields,
+                        rate=rate)
         if name in self._timer_obs:
             timer = self._timer_obs[name]
             timer.msg_data = msg_data
@@ -275,14 +270,13 @@ class MetlogClient(object):
             self._timer_obs[name] = timer
         return timer
 
-    def timer_send(self, name, elapsed, timestamp=None, logger=None,
-                   severity=None, fields=None, rate=1.0):
+    def timer_send(self, name, elapsed, logger=None, severity=None,
+                   fields=None, rate=1.0):
         """
         Converts timing data into a metlog message for delivery.
 
         :param name: Required string label for the timer.
         :param elapsed: Elapsed time of the timed event, in ms.
-        :param timestamp: Time at which the message is generated.
         :param logger: String token identifying the message generator.
         :param severity: Numerical code (0-7) for msg severity, per RFC 5424.
         :param fields: Arbitrary key/value pairs for add'l metadata.
@@ -294,16 +288,15 @@ class MetlogClient(object):
         payload = str(elapsed)
         fields = fields if fields is not None else dict()
         fields.update({'name': name, 'rate': rate})
-        self.metlog('timer', timestamp, logger, severity, payload, fields)
+        self.metlog('timer', logger, severity, payload, fields)
 
-    def incr(self, name, count=1, timestamp=None, logger=None, severity=None,
-             fields=None, rate=1.0):
+    def incr(self, name, count=1, logger=None, severity=None, fields=None,
+             rate=1.0):
         """
         Sends an 'increment counter' message.
 
         :param name: String label for the counter.
         :param count: Integer amount by which to increment the counter.
-        :param timestamp: Time at which the message is generated.
         :param logger: String token identifying the message generator.
         :param severity: Numerical code (0-7) for msg severity, per RFC 5424.
         :param fields: Arbitrary key/value pairs for add'l metadata.
@@ -314,7 +307,7 @@ class MetlogClient(object):
         fields = fields if fields is not None else dict()
         fields['name'] = name
         fields['rate'] = rate
-        self.metlog('counter', timestamp, logger, severity, payload, fields)
+        self.metlog('counter', logger, severity, payload, fields)
 
     # Standard Python logging API emulation
     def _oldstyle(self, severity, msg, *args, **kwargs):

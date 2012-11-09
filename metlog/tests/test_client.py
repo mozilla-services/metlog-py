@@ -72,7 +72,6 @@ class TestMetlogClient(object):
 
     def test_metlog_full(self):
         metlog_args = dict(payload='this is another test',
-                           timestamp=datetime.utcnow(),
                            logger='alternate',
                            severity=2,
                            fields={'foo': 'bar',
@@ -84,7 +83,7 @@ class TestMetlogClient(object):
                             'env_version': self.client.env_version,
                             'metlog_pid': os.getpid(),
                             'metlog_hostname': socket.gethostname(),
-                            'timestamp': metlog_args['timestamp'].isoformat()})
+                            'timestamp': actual_msg['timestamp']})
         eq_(actual_msg, metlog_args)
 
     def test_oldstyle(self):

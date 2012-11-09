@@ -171,7 +171,7 @@ class TestCannedDecorators(DecoratorTestBase):
 
 class TestDecoratorArgs(DecoratorTestBase):
     def test_arg_incr(self):
-        @incr_count(name='qdo.foo', count=5, timestamp=0, logger='somelogger',
+        @incr_count(name='qdo.foo', count=5, logger='somelogger',
                     severity=2)
         def simple(x, y):
             return x + y
@@ -180,10 +180,10 @@ class TestDecoratorArgs(DecoratorTestBase):
         msgs = [json.loads(m) for m in self.client.sender.msgs]
         eq_(len(msgs), 1)
 
-        expected = {'severity': 2, 'timestamp': 0,
+        expected = {'severity': 2, 'timestamp': msgs[0]['timestamp'],
                     'fields': {'name': 'qdo.foo',
-                        'rate': 1.0,
-                        },
+                               'rate': 1.0,
+                               },
                     'logger': 'somelogger', 'type': 'counter',
                     'payload': '5', 'env_version': MetlogClient.env_version,
                     'metlog_hostname': socket.gethostname(),
@@ -193,16 +193,16 @@ class TestDecoratorArgs(DecoratorTestBase):
 
     @raises(TypeError)
     def test_arg_incr_bad(self):
-        @incr_count(name='qdo.foo', count=5, timestamp=0, logger='somelogger',
-                severity=2, bad_arg=42)
+        @incr_count(name='qdo.foo', count=5, logger='somelogger', severity=2,
+                    bad_arg=42)
         def invalid(x, y):
             return x + y
 
         invalid(3, 5)
 
     def test_arg_timeit(self):
-        @timeit(name='qdo.timeit', timestamp=8231, logger='timeit_logger',
-                severity=5, fields={'anumber': 42, 'atext': 'foo'}, rate=7)
+        @timeit(name='qdo.timeit', logger='timeit_logger', severity=5,
+                fields={'anumber': 42, 'atext': 'foo'}, rate=7)
         def simple(x, y):
             return x + y
 
@@ -210,7 +210,7 @@ class TestDecoratorArgs(DecoratorTestBase):
         msgs = [json.loads(m) for m in self.client.sender.msgs]
         eq_(len(msgs), 1)
 
-        expected = {'severity': 5, 'timestamp': 8231,
+        expected = {'severity': 5, 'timestamp': msgs[0]['timestamp'],
                     'fields': {'anumber': 42, 'rate': 7,
                                'name': 'qdo.timeit', 'atext': 'foo',
                                },
@@ -223,8 +223,8 @@ class TestDecoratorArgs(DecoratorTestBase):
 
     @raises(TypeError)
     def test_arg_timeit_bad(self):
-        @timeit(name='qdo.timeit', timestamp=8231, logger='timeit_logger',
-                severity=5, fields={'anumber': 42, 'atext': 'foo'}, bad_arg=7)
+        @timeit(name='qdo.timeit', logger='timeit_logger', severity=5,
+                fields={'anumber': 42, 'atext': 'foo'}, bad_arg=7)
         def invalid(x, y):
             return x + y
 
