@@ -47,7 +47,12 @@ def mb():
 
     if arguments.get('--raw'):
         udpsock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        msg = {"severity": 6, "timestamp": datetime.now().isoformat(),
+        utcnow = datetime.utcnow()
+        if utcnow.microsecond == 0:
+            timestamp = "%s.000000Z" % utcnow.isoformat()
+        else:
+            timestamp = "%sZ" % utcnow.isoformat()
+        msg = {"severity": 6, "timestamp": timestamp,
                "metlog_hostname": "spire",
                "fields": {"userid": 25, "req_time": 4}, "metlog_pid": 34328,
                "logger": "syncstorage", "type": "services", "payload": "foo",

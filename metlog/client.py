@@ -234,7 +234,12 @@ class MetlogClient(object):
         logger = logger if logger is not None else self.logger
         severity = severity if severity is not None else self.severity
         fields = fields if fields is not None else dict()
-        timestamp = "%sZ" % datetime.utcnow().isoformat()
+        # have to make sure we've got good RFC3339 time formatting
+        utcnow = datetime.utcnow()
+        if utcnow.microsecond == 0:
+            timestamp = "%s.000000Z" % utcnow.isoformat()
+        else:
+            timestamp = "%sZ" % utcnow.isoformat()
 
         full_msg = dict(type=type, timestamp=timestamp, logger=logger,
                         severity=severity, payload=payload, fields=fields,
