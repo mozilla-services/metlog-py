@@ -259,3 +259,13 @@ def test_load_config_multiple_times():
 
     client_from_dict_config(cfg)
     client_from_dict_config(cfg)
+
+def test_clients_expose_configuration():
+    cfg = {'logger': 'addons-marketplace-dev',
+           'sender': {'class': 'metlog.senders.UdpSender',
+           'host': ['logstash1', 'logstash2'],
+           'port': '5566'}}
+
+    client = client_from_dict_config(cfg)
+    eq_(client._config, cfg)
+
