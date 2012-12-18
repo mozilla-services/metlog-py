@@ -1,5 +1,11 @@
-0.9.9 - ????-??-??
+0.9.10 - ????
 ==================
+
+0.9.9 - 2012-12-18
+==================
+
+- Added a _config attribute on the client instance so you can inspect
+  the actual configuration that is in play.
 
 0.9.8 - 2012-10-05
 ==================
