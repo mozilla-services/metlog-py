@@ -18,6 +18,7 @@ from textwrap import dedent
 import ConfigParser
 import StringIO
 import copy
+import json
 import os
 import re
 
@@ -155,7 +156,7 @@ def client_from_dict_config(config, client=None, clear_global=False):
     # Make a deep copy of the configuration so that subsequent uses of
     # the config won't blow up
     config = nest_prefixes(copy.deepcopy(config))
-    config_copy = copy.deepcopy(config)
+    config_copy = json.dumps(copy.deepcopy(config))
 
     sender_config = config.get('sender', {})
     logger = config.get('logger', '')

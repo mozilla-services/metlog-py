@@ -19,7 +19,12 @@ from metlog.senders import DebugCaptureSender
 from mock import Mock
 from mock import patch
 from nose.tools import assert_raises, eq_, ok_
+
+import json
 import os
+
+# sys is used in a mock patch, so flake8 may yell at you
+import sys  # NOQA
 
 
 MockSender = Mock()
@@ -156,8 +161,9 @@ def test_plugins_config():
     client = client_from_text_config(cfg_txt, 'metlog')
     actual = client.dummy(verbose=True)
     expected = {'host': 'lolcathost',
-     'foo': 'bar', 'some_list': ['dog', 'cat', 'bus'],
-     'port': 8080}
+                'foo': 'bar',
+                'some_list': ['dog', 'cat', 'bus'],
+                'port': 8080}
     eq_(actual, expected)
 
 
@@ -170,8 +176,6 @@ def test_handshake_sender_no_backend():
     sender_handshake_timeout = 200
     sender_hwm = 100
     """
-    import json
-    import sys   # NOQA
     msg = {'milk': 'shake'}
     expected = "%s\n" % json.dumps(msg)
     with patch('sys.stderr') as mock_stderr:
@@ -194,8 +198,6 @@ def test_handshake_sender_with_backend():
     sender_hwm = 100
     sender_livecheck = 30
     """
-    import json
-    import sys   # NOQA
 
     # Redirect stderr
     with patch('sys.stderr') as mock_stderr:
@@ -260,6 +262,7 @@ def test_load_config_multiple_times():
     client_from_dict_config(cfg)
     client_from_dict_config(cfg)
 
+
 def test_clients_expose_configuration():
     cfg = {'logger': 'addons-marketplace-dev',
            'sender': {'class': 'metlog.senders.UdpSender',
@@ -267,5 +270,4 @@ def test_clients_expose_configuration():
            'port': '5566'}}
 
     client = client_from_dict_config(cfg)
-    eq_(client._config, cfg)
-
+    eq_(client._config, json.dumps(cfg))
