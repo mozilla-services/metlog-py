@@ -213,10 +213,4 @@ used is actually what you expect it to be ::
            'host': ['logstash1', 'logstash2'],
            'port': '5566'}}
     client = client_from_dict_config(cfg)
-    assert client._config == cfg
-
-
-
-
-
-
+    assert client._config == json.dumps(cfg)
