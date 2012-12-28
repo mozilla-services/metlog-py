@@ -1,5 +1,7 @@
-0.9.10 - ????
+0.9.10 - 2012-12-28
 ==================
+- changed the _config attribute to be a flat json string for simpler
+  debugging in production systems
 
 0.9.9 - 2012-12-18
 ==================
