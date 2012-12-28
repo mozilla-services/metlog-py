@@ -1,3 +1,6 @@
+0.9.11 - ???
+==================
+
 0.9.10 - 2012-12-28
 ==================
 - changed the _config attribute to be a flat json string for simpler
