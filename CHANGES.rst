@@ -1,5 +1,16 @@
-0.9.9 - ????-??-??
+0.9.11 - ???
 ==================
+
+0.9.10 - 2012-12-28
+==================
+- changed the _config attribute to be a flat json string for simpler
+  debugging in production systems
+
+0.9.9 - 2012-12-18
+==================
+
+- Added a _config attribute on the client instance so you can inspect
+  the actual configuration that is in play.
 
 0.9.8 - 2012-10-05
 ==================

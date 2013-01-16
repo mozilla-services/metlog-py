@@ -177,12 +177,14 @@ class TestMetlogClient(object):
         def timed():
             time.sleep(0.001)
 
-        for i in range(10):
+        # leverage chance by using a large sample
+        # instead of just 10 samples
+        for i in range(1000):
             timed()
 
         # this is a weak test, but not quite sure how else to
         # test explicitly random behaviour
-        ok_(self.mock_sender.send_message.call_count < 10)
+        ok_(self.mock_sender.send_message.call_count < 100)
 
     def test_incr(self):
         name = 'incr'
@@ -329,7 +331,7 @@ class TestUnicode(object):
     def setUp(self):
         self.mock_sender = Mock()
         self.mock_sender.send_message.side_effect = \
-                UnicodeError("UnicodeError encoding user data")
+            UnicodeError("UnicodeError encoding user data")
         self.client = MetlogClient(self.mock_sender, self.logger)
         # overwrite the class-wide threadlocal w/ an instance one
         # so values won't persist btn tests

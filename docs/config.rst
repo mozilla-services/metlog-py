@@ -197,4 +197,20 @@ bound to the client::
     }
 
 
+Debugging your configuration
+============================
 
+You may find yourself with a metlog client which is not behaving
+in a manner that you expect.  Metlog provides a deepcopy of the
+configuration that was used when the client was instantiated for
+debugging purposes.
+
+The following code shows how you can verify that the configuration 
+used is actually what you expect it to be ::
+
+    cfg = {'logger': 'addons-marketplace-dev',
+           'sender': {'class': 'metlog.senders.UdpSender',
+           'host': ['logstash1', 'logstash2'],
+           'port': '5566'}}
+    client = client_from_dict_config(cfg)
+    assert client._config == json.dumps(cfg)
