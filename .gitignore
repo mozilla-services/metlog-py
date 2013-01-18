@@ -2,6 +2,7 @@ build
 dist
 _build
 .coverage
+*.rpm
 *.pyc
 *.egg-info
 *.swp
