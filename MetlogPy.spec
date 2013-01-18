@@ -1,6 +1,6 @@
 %define name metlog-py
 %define pythonname MetlogPy
-%define version 0.9.11
+%define version 0.10.0
 %define unmangled_version %{version}
 %define release 0
 

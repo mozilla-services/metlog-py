@@ -1,8 +1,14 @@
-0.9.11 - ???
-==================
+0.10.0 - 2013-01-18
+===================
+
+- Improved sample testing to use a larger sample size for fewer false
+  failures.
+
+- Switched to always emitting RFC3339 timestamps, and no longer allow
+  timestamp to be passed in as an argument in metlog client API.
 
 0.9.10 - 2012-12-28
-==================
+===================
 - changed the _config attribute to be a flat json string for simpler
   debugging in production systems
 
