@@ -1,3 +1,9 @@
+This project has been superceded by 
+`heka-py https://github.com/mozilla-services/heka-py` and 
+`hekad https://github.com/mozilla-services/heka`.
+
+This repository is no longer being actively maintained.
+
 =========
 metlog-py
 =========
